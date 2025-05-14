@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "task_parquet_to_delta1"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "d7d34efb-7139-8cb3-437c-2f7b8e6e0292"
+  }
+}

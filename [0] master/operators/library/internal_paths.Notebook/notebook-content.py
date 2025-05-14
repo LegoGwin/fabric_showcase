@@ -115,9 +115,9 @@ def get_deltalake_path(path_type, logical_path):
 
 def get_lakehouse_path(path_type, logical_path):
     split_path = split_logical_path(logical_path)
-    if split_path[0] == 'lakefiles':
+    if split_path['path_type'] == 'lakefiles':
         result = get_lakefiles_path(path_type, logical_path)
-    elif split_path[0] == 'deltalake':
+    elif split_path['path_type'] == 'deltalake':
         result = get_deltalake_path(path_type, logical_path)
 
     return result

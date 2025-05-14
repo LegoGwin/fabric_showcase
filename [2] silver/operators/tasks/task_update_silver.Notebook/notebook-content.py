@@ -83,7 +83,7 @@ write_method = 'overwrite'
 partition_update = 'True'
 full_refresh = 'False'
 schema = None
-min_partition = None
+min_partition = '20250512105513'
 
 # METADATA ********************
 
@@ -150,16 +150,6 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 # CELL ********************
 
 mssparkutils.notebook.exit(get_max_partition(df_source))
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 
 # METADATA ********************
 

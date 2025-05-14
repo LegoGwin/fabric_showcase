@@ -22,10 +22,10 @@
 
 # CELL ********************
 
-from pyspark.sql.types import ArrayType, StructType
-from pyspark.sql.functions import col, lit, posexplode_outer, to_json
-from pyspark.sql.types import StructType, ArrayType, MapType
 import re
+import json
+from pyspark.sql.types import ArrayType, StructType, MapType
+from pyspark.sql.functions import col, lit, posexplode_outer, to_json
 
 # METADATA ********************
 
@@ -36,34 +36,26 @@ import re
 
 # CELL ********************
 
-%run internal_paths
+def clean_column_name(column_name):
+    column_name = column_name.replace('.', '_')
+    column_name = re.sub(r'[^0-9A-Za-z_]', '', column_name)
 
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-def clean_col_name(name):
-    name = name.replace('.', '_')
-    name = re.sub(r'[^0-9A-Za-z_]', '', name)
-    return name
+    return column_name
 
 def format_columns(df):
     exprs = []
     for field in df.schema:
-        orig = field.name
-        clean_name = clean_col_name(orig)
+        column_name = field.name
+        clean_name = clean_column_name(column_name)
 
         if isinstance(field.dataType, (StructType, ArrayType, MapType)):
-            exprs.append(f"to_json(`{orig}`) as `{clean_name}`")
+            exprs.append(f"to_json(`{column_name}`) as `{clean_name}`")
         else:
-            exprs.append(f"cast(`{orig}` as string) as `{clean_name}`")
+            exprs.append(f"cast(`{column_name}` as string) as `{clean_name}`")
 
-    return df.selectExpr(*exprs)
+    df = df.selectExpr(*exprs)
+
+    return df 
 
 # METADATA ********************
 
@@ -74,32 +66,62 @@ def format_columns(df):
 
 # CELL ********************
 
-def flatten_json(df, recursive_depth):
-    if recursive_depth == 0:
-        return df
+def get_flatten_settings(settings):
+    settings = json.loads(settings)
+    settings_list = []
 
-    complex_fields = []
-    for field in df.schema.fields:
-        if isinstance(field.dataType, ArrayType):
-            field_name = field.name
-            df = df \
-                .selectExpr("*", f"posexplode_outer(`{field_name}`) as (pos, `{field_name}_exploded`)") \
-                .drop(field_name, "pos") \
-                .withColumnRenamed(f"{field_name}_exploded", f'{field_name}')
-        elif isinstance(field.dataType, StructType):
-            for nested_field in field.dataType.fields:
-                nested_field_name = f"{field.name}.{nested_field.name}"
-                df = df.withColumn(
-                    nested_field_name, 
-                    col(f"`{field.name}`.`{nested_field.name}`")
-                )
-            complex_fields.append(field.name)
+    depths = sorted(set([setting['depth'] for setting in settings]))
+    for depth in depths:
+        setting = [setting['column'] for setting in settings if setting["depth"] == depth]
+        settings_list.append(setting)
 
+    return settings_list
 
-    df = df.drop(*complex_fields)
-    if any(isinstance(field.dataType, (ArrayType, StructType)) for field in df.schema.fields):
-        return flatten_json(df, recursive_depth - 1)
-    
+def flatten_json_columns(df, column_names):
+    for column_name in column_names:
+        column_type = df.schema[column_name].dataType
+        if isinstance(column_type, ArrayType):
+            df = (df.selectExpr("*", f"posexplode_outer(`{column_name}`) as (pos, col)")
+                .drop(column_name, 'pos')
+                .withColumnRenamed('col', column_name))
+        elif isinstance(column_type, StructType):
+            for nested_field in column_type.fields:
+                nested_name = f"{column_name}_{nested_field.name}"
+                struct_name = f"`{column_name}`.`{nested_field.name}`"
+                df = df.withColumn(nested_name, col(struct_name))
+            df = df.drop(column_name)
+
+    return df
+
+def flatten_json(df, flatten_mode, flatten_settings = '[]'):
+    flatten_mode = flatten_mode.strip().lower()
+
+    if flatten_mode == 'recursive':
+        fields = df.schema.fields
+        while any(isinstance(field.dataType, (ArrayType, StructType)) for field in fields):
+            column_names = [field.name for field in fields]
+            df = flatten_json_columns(df, column_names)
+            fields = df.schema.fields
+    elif flatten_mode == 'column':
+        flatten_settings = get_flatten_settings(flatten_settings)
+        for column_names in flatten_settings:
+            df = flatten_json_columns(df, column_names)
+
+    return df
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def transform_json(df, flatten_mode, settings):
+    df = flatten_json(df, flatten_mode, settings)
+    df = format_columns(df)
+
     return df
 
 # METADATA ********************

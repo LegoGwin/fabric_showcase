@@ -46,7 +46,6 @@
 
 target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
-flatten_depth = '8'
 min_partition = '20250512141514'
 
 # METADATA ********************
@@ -58,29 +57,7 @@ min_partition = '20250512141514'
 
 # CELL ********************
 
-flatten_depth = int(flatten_depth)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-df = read_json_files(source_path, min_partition)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-df = flatten_json(df, flatten_depth)
+df = read_parquet_files(source_path, min_partition)
 
 # METADATA ********************
 

@@ -58,7 +58,7 @@ def text_list_to_files(text_list, logical_path):
     df = spark.createDataFrame(text_list, StringType())
     df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
 
-    output_path = get_lakefiles_path('relative', logical_path)
+    output_path = get_lakehouse_path('relative', logical_path)
     df.write.mode('append').partitionBy(partition_name).text(output_path)
 
 # METADATA ********************
@@ -70,58 +70,8 @@ def text_list_to_files(text_list, logical_path):
 
 # CELL ********************
 
-def dataframe_to_files(df, logical_path):
-    df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
-
-    output_path = get_lakefiles_path('relative', logical_path)
-    df.write.mode('append').partitionBy(partition_name).parquet(output_path)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-def dataframe_to_table(df, logical_path):
-    api_path = get_deltalake_path('api', logical_path)
-    relative_path = get_deltalake_path('relative', logical_path)
-
-    if spark.catalog.tableExists(api_path):
-        target_schema = spark.read.format('delta').load(relative_path).schema
-        target_columns = [f'`{field.name}`' for field in target_schema]
-    else:
-        target_columns = []
-
-    source_schema = df.schema
-    source_columns = [f'`{field.name}`' for field in source_schema]
-
-    old_columns = [column for column in target_columns if column in source_columns]
-    new_columns = [column for column in source_columns if column not in target_columns]
-    ordered_columns = old_columns + new_columns
-
-    df_reordered = df.select(*ordered_columns)
-    
-    df_reordered.write \
-        .option('mergeSchema', 'true') \
-        .mode('append') \
-        .partitionBy(partition_name) \
-        .format('delta') \
-        .save(relative_path)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 def read_json_files(logical_path, min_partition = None, multi_line = 'false'):
-    path = get_lakefiles_path('relative',logical_path)
+    path = get_lakehouse_path('relative',logical_path)
 
     df = spark.read \
         .option('primitivesAsString', 'true') \
@@ -135,7 +85,6 @@ def read_json_files(logical_path, min_partition = None, multi_line = 'false'):
     
     return df
 
-
 # METADATA ********************
 
 # META {
@@ -145,8 +94,11 @@ def read_json_files(logical_path, min_partition = None, multi_line = 'false'):
 
 # CELL ********************
 
-def read_csv_files(lakehouse, directory, min_partition = None, read_per_file = True):
-    pass
+def dataframe_to_files(df, logical_path):
+    df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
+
+    output_path = get_lakehouse_path('relative', logical_path)
+    df.write.mode('append').partitionBy(partition_name).parquet(output_path)
 
 # METADATA ********************
 
@@ -169,8 +121,31 @@ def read_parquet_files():
 
 # CELL ********************
 
-def read_text_files():
-    pass
+def dataframe_to_table(df, logical_path):
+    api_path = get_lakehouse_path('api', logical_path)
+    relative_path = get_lakehouse_path('relative', logical_path)
+
+    if spark.catalog.tableExists(api_path):
+        target_schema = spark.read.format('delta').load(relative_path).schema
+        target_columns = [f'`{field.name}`' for field in target_schema]
+    else:
+        target_columns = []
+
+    source_schema = df.schema
+    source_columns = [f'`{field.name}`' for field in source_schema]
+
+    old_columns = [column for column in target_columns if column in source_columns]
+    new_columns = [column for column in source_columns if column not in target_columns]
+    ordered_columns = old_columns + new_columns
+
+    df_reordered = df.select(*ordered_columns)
+    
+    df_reordered.write \
+        .option('mergeSchema', 'true') \
+        .mode('append') \
+        .partitionBy(partition_name) \
+        .format('delta') \
+        .save(relative_path)
 
 # METADATA ********************
 

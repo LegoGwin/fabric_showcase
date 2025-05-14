@@ -70,9 +70,16 @@
               },
               "type": "string"
             },
-            "flatten_depth": {
+            "flatten_mode": {
               "value": {
-                "value": "@coalesce(\n    pipeline().parameters.flatten_depth,\n    activity('lookup_meta_data').output.value[0].flatten_depth\n)",
+                "value": "@coalesce(\n    pipeline().parameters.flatten_mode,\n    activity('lookup_meta_data').output.value[0].flatten_mode\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "flatten_settings": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.flatten_settings,\n    string(activity('lookup_meta_data_flatten').output.value)\n)",
                 "type": "Expression"
               },
               "type": "string"
@@ -97,6 +104,12 @@
         "dependsOn": [
           {
             "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "lookup_meta_data_flatten",
             "dependencyConditions": [
               "Succeeded"
             ]
@@ -166,6 +179,55 @@
         "typeProperties": {
           "source": {
             "type": "FabricSqlDatabaseSource",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_json_to_delta_flatten]",
+            "storedProcedureParameters": {
+              "task_id": {
+                "value": {
+                  "value": "@pipeline().parameters.task_id",
+                  "type": "Expression"
+                },
+                "type": "String"
+              }
+            },
+            "partitionOption": "None",
+            "queryTimeout": "02:00:00"
+          },
+          "datasetSettings": {
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "connectionSettings": {
+              "name": "meta_data",
+              "properties": {
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "artifactId": "9d2f8001-d815-9d78-4d76-6f10d6cac2ad",
+                  "workspaceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "externalReferences": {
+                  "connection": "5ce2552f-bda6-4456-8df2-5b8dc7c3fb77"
+                },
+                "annotations": []
+              }
+            },
+            "annotations": []
+          },
+          "firstRowOnly": false
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "lookup_meta_data_flatten",
+        "dependsOn": []
+      },
+      {
+        "type": "Lookup",
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
             "sqlReaderStoredProcedureName": "[dbo].[get_task_json_to_delta_dynamic]",
             "storedProcedureParameters": {
               "task_id": {
@@ -221,7 +283,10 @@
       "source_path": {
         "type": "string"
       },
-      "flatten_depth": {
+      "flatten_mode": {
+        "type": "string"
+      },
+      "flatten_settings": {
         "type": "string"
       },
       "min_partition": {
