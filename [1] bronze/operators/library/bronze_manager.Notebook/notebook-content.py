@@ -109,8 +109,18 @@ def dataframe_to_files(df, logical_path):
 
 # CELL ********************
 
-def read_parquet_files():
-    pass
+def read_parquet_files(logical_path, min_partition = None):
+    path = get_lakehouse_path('relative', logical_path)
+
+    df = spark.read \
+        .option('mergeSchema', 'true') \
+        .option('recusriveFileLookup', 'true') \
+        .parquet(path)
+
+    if min_partition:
+        df = df.filter(f'{partition_name} >= {min_partition}')
+
+    return df
 
 # METADATA ********************
 
