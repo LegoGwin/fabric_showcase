@@ -1,0 +1,168 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "Copy",
+        "typeProperties": {
+          "source": {
+            "type": "LakehouseTableSource",
+            "datasetSettings": {
+              "type": "LakehouseTable",
+              "typeProperties": {
+                "schema": {
+                  "value": "@activity('lookup_meta_data').output.value[0].source_schema",
+                  "type": "Expression"
+                },
+                "table": {
+                  "value": "@activity('lookup_meta_data').output.value[0].source_table",
+                  "type": "Expression"
+                }
+              },
+              "schema": [],
+              "linkedService": {
+                "name": "silver_lakehouse",
+                "properties": {
+                  "type": "Lakehouse",
+                  "typeProperties": {
+                    "artifactId": "1a3933c9-4699-9995-4d7f-c922643c3c4f",
+                    "workspaceId": "00000000-0000-0000-0000-000000000000",
+                    "rootFolder": "Tables"
+                  },
+                  "annotations": []
+                }
+              },
+              "annotations": []
+            }
+          },
+          "sink": {
+            "type": "DataWarehouseSink",
+            "preCopyScript": {
+              "value": "truncate table\n@activity('lookup_meta_data').output.value[0].target_schema.\n@activity('lookup_meta_data').output.value[0].target_table",
+              "type": "Expression"
+            },
+            "allowCopyCommand": true,
+            "copyCommandSettings": {},
+            "datasetSettings": {
+              "type": "DataWarehouseTable",
+              "typeProperties": {
+                "schema": {
+                  "value": "@activity('lookup_meta_data').output.value[0].target_schema",
+                  "type": "Expression"
+                },
+                "table": {
+                  "value": "@activity('lookup_meta_data').output.value[0].target_table",
+                  "type": "Expression"
+                }
+              },
+              "schema": [],
+              "linkedService": {
+                "name": "gold_warehouse",
+                "properties": {
+                  "type": "DataWarehouse",
+                  "typeProperties": {
+                    "artifactId": "a671df4a-ca2a-451a-ace0-9af8862d30fd",
+                    "endpoint": "64k76qoso54upbqqkmfdnabrny-ndyrahpalz7urp5ujpd6t7nwvm.datawarehouse.fabric.microsoft.com",
+                    "workspaceId": "1d10f168-5ee0-487f-bfb4-4bc7e9fdb6ab"
+                  },
+                  "annotations": []
+                }
+              },
+              "annotations": []
+            }
+          },
+          "translator": {
+            "type": "TabularTranslator",
+            "typeConversion": true,
+            "typeConversionSettings": {
+              "allowDataTruncation": true,
+              "treatBooleanAsNumber": false
+            }
+          },
+          "enableStaging": true
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "task",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Lookup",
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_pokemon_api]",
+            "storedProcedureParameters": {
+              "task_id": {
+                "value": {
+                  "value": "@pipeline().parameters.task_id",
+                  "type": "Expression"
+                },
+                "type": "String"
+              }
+            },
+            "partitionOption": "None",
+            "queryTimeout": "02:00:00"
+          },
+          "datasetSettings": {
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "connectionSettings": {
+              "name": "meta_data",
+              "properties": {
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "artifactId": "9d2f8001-d815-9d78-4d76-6f10d6cac2ad",
+                  "workspaceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "externalReferences": {
+                  "connection": "5ce2552f-bda6-4456-8df2-5b8dc7c3fb77"
+                },
+                "annotations": []
+              }
+            },
+            "annotations": []
+          },
+          "firstRowOnly": false
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "lookup_meta_data",
+        "dependsOn": []
+      }
+    ],
+    "parameters": {
+      "task_id": {
+        "type": "string"
+      },
+      "target_schema": {
+        "type": "string"
+      },
+      "target_table": {
+        "type": "string"
+      },
+      "source_schema": {
+        "type": "string"
+      },
+      "source_table": {
+        "type": "string"
+      }
+    }
+  }
+}

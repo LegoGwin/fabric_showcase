@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "task_identity_transfer"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "9659af00-0f3b-bd8e-445a-7349208ff09c"
+  }
+}
