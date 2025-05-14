@@ -1,0 +1,192 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "Until",
+        "typeProperties": {
+          "expression": {
+            "value": "@equals(variables('batch_num'), 0)",
+            "type": "Expression"
+          },
+          "timeout": "0.12:00:00",
+          "activities": [
+            {
+              "type": "Lookup",
+              "typeProperties": {
+                "source": {
+                  "type": "FabricSqlDatabaseSource",
+                  "sqlReaderStoredProcedureName": "[dbo].[get_control_task_batch]",
+                  "storedProcedureParameters": {
+                    "job_id": {
+                      "value": {
+                        "value": "@pipeline().parameters.job_id",
+                        "type": "Expression"
+                      },
+                      "type": "Int32"
+                    },
+                    "batch_num": {
+                      "value": {
+                        "value": "@variables('batch_num')",
+                        "type": "Expression"
+                      },
+                      "type": "Int32"
+                    }
+                  },
+                  "partitionOption": "None",
+                  "queryTimeout": "02:00:00"
+                },
+                "datasetSettings": {
+                  "type": "FabricSqlDatabaseTable",
+                  "schema": [],
+                  "connectionSettings": {
+                    "name": "meta_data",
+                    "properties": {
+                      "type": "FabricSqlDatabase",
+                      "typeProperties": {
+                        "artifactId": "9d2f8001-d815-9d78-4d76-6f10d6cac2ad",
+                        "workspaceId": "00000000-0000-0000-0000-000000000000"
+                      },
+                      "externalReferences": {
+                        "connection": "5ce2552f-bda6-4456-8df2-5b8dc7c3fb77"
+                      },
+                      "annotations": []
+                    }
+                  },
+                  "annotations": []
+                },
+                "firstRowOnly": false
+              },
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "lookup_task_batch",
+              "dependsOn": []
+            },
+            {
+              "type": "IfCondition",
+              "typeProperties": {
+                "expression": {
+                  "value": "@empty(activity('lookup_task_batch').output.value)",
+                  "type": "Expression"
+                },
+                "ifTrueActivities": [
+                  {
+                    "type": "SetVariable",
+                    "typeProperties": {
+                      "variableName": "batch_num",
+                      "value": 0
+                    },
+                    "policy": {
+                      "secureInput": false,
+                      "secureOutput": false
+                    },
+                    "name": "batch_num_to_0",
+                    "dependsOn": []
+                  }
+                ],
+                "ifFalseActivities": [
+                  {
+                    "type": "InvokePipeline",
+                    "typeProperties": {
+                      "parameters": {
+                        "batch": {
+                          "value": "@activity('lookup_task_batch').output.value",
+                          "type": "Expression"
+                        }
+                      },
+                      "waitOnCompletion": true,
+                      "workspaceId": "00000000-0000-0000-0000-000000000000",
+                      "pipelineId": "a2d0a416-69a1-b683-491e-fc011460026b",
+                      "operationType": "InvokeFabricPipeline"
+                    },
+                    "externalReferences": {
+                      "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                    },
+                    "policy": {
+                      "timeout": "0.12:00:00",
+                      "retry": 0,
+                      "retryIntervalInSeconds": 30,
+                      "secureInput": false,
+                      "secureOutput": false
+                    },
+                    "name": "control_task",
+                    "dependsOn": []
+                  },
+                  {
+                    "type": "SetVariable",
+                    "typeProperties": {
+                      "variableName": "batch_num",
+                      "value": {
+                        "value": "@add(activity('lookup_task_batch').output.value[0].batch_num, 1)",
+                        "type": "Expression"
+                      }
+                    },
+                    "policy": {
+                      "secureInput": false,
+                      "secureOutput": false
+                    },
+                    "name": "increment_batch_num",
+                    "dependsOn": [
+                      {
+                        "activity": "control_task",
+                        "dependencyConditions": [
+                          "Completed"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "name": "if_empty_batch",
+              "dependsOn": [
+                {
+                  "activity": "lookup_task_batch",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "SetVariable",
+              "typeProperties": {
+                "variableName": "batch_num",
+                "value": 0
+              },
+              "policy": {
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "batch_num_to_0_on_fail",
+              "dependsOn": [
+                {
+                  "activity": "lookup_task_batch",
+                  "dependencyConditions": [
+                    "Failed"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "name": "until_empy_batch",
+        "dependsOn": []
+      }
+    ],
+    "parameters": {
+      "job_id": {
+        "type": "int"
+      }
+    },
+    "variables": {
+      "batch_num": {
+        "type": "Integer",
+        "defaultValue": 1
+      }
+    }
+  }
+}

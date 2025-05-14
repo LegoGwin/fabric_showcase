@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "task_json_to_delta"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "92076b03-8810-aee8-4c70-329c122d4917"
+  }
+}

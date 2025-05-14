@@ -1,0 +1,145 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "ForEach",
+        "typeProperties": {
+          "batchCount": 5,
+          "items": {
+            "value": "@pipeline().parameters.batch",
+            "type": "Expression"
+          },
+          "activities": [
+            {
+              "type": "Switch",
+              "typeProperties": {
+                "on": {
+                  "value": "@item().pipeline_id",
+                  "type": "Expression"
+                },
+                "cases": [
+                  {
+                    "value": "task_pokemon_api",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": {
+                              "value": "@item().task_id",
+                              "type": "Expression"
+                            }
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "9b5d4162-101e-833d-41f9-9e22e5a51afc",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_pokemon_api",
+                        "dependsOn": []
+                      }
+                    ]
+                  },
+                  {
+                    "value": "task_json_to_delta",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": {
+                              "value": "@item().task_id",
+                              "type": "Expression"
+                            }
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "92076b03-8810-aee8-4c70-329c122d4917",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_json_to_delta",
+                        "dependsOn": []
+                      }
+                    ]
+                  },
+                  {
+                    "value": "task_update_silver",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": {
+                              "value": "@item().task_id",
+                              "type": "Expression"
+                            }
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "9b6701d7-8105-9971-457f-394dca8ece72",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_update_silver",
+                        "dependsOn": []
+                      }
+                    ]
+                  }
+                ],
+                "defaultActivities": [
+                  {
+                    "type": "Fail",
+                    "typeProperties": {
+                      "message": "undefined_task",
+                      "errorCode": "1000"
+                    },
+                    "name": "fail_if_undefined_task",
+                    "dependsOn": []
+                  }
+                ]
+              },
+              "name": "select_task",
+              "dependsOn": []
+            }
+          ]
+        },
+        "name": "for_each_task",
+        "dependsOn": []
+      }
+    ],
+    "parameters": {
+      "batch": {
+        "type": "array"
+      }
+    }
+  }
+}

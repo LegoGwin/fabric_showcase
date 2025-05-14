@@ -1,0 +1,105 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "TridentNotebook",
+        "typeProperties": {
+          "notebookId": "90b9b2d6-5a26-922d-43bc-0ae123ddb481",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "target_path": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.target_path,\n    activity('lookup_meta_data').output.value[0].target_path\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "resource": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.resource,\n    activity('lookup_meta_data').output.value[0].resource\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "task",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Lookup",
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_pokemon_api]",
+            "storedProcedureParameters": {
+              "task_id": {
+                "value": {
+                  "value": "@pipeline().parameters.task_id",
+                  "type": "Expression"
+                },
+                "type": "String"
+              }
+            },
+            "partitionOption": "None",
+            "queryTimeout": "02:00:00"
+          },
+          "datasetSettings": {
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "connectionSettings": {
+              "name": "meta_data",
+              "properties": {
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "artifactId": "9d2f8001-d815-9d78-4d76-6f10d6cac2ad",
+                  "workspaceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "externalReferences": {
+                  "connection": "5ce2552f-bda6-4456-8df2-5b8dc7c3fb77"
+                },
+                "annotations": []
+              }
+            },
+            "annotations": []
+          },
+          "firstRowOnly": false
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "lookup_meta_data",
+        "dependsOn": []
+      }
+    ],
+    "parameters": {
+      "task_id": {
+        "type": "string"
+      },
+      "target_path": {
+        "type": "string"
+      },
+      "resource": {
+        "type": "string"
+      }
+    }
+  }
+}

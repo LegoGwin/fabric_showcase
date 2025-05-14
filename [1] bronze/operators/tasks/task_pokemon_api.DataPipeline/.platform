@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "task_pokemon_api"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "9b5d4162-101e-833d-41f9-9e22e5a51afc"
+  }
+}
