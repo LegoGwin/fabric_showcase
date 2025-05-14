@@ -113,16 +113,6 @@ dataframe_to_table(df, target_path)
 
 # CELL ********************
 
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 mssparkutils.notebook.exit(get_max_partition(df))
 
 # METADATA ********************
