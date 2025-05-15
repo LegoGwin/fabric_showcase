@@ -10,11 +10,11 @@
               "type": "LakehouseTable",
               "typeProperties": {
                 "schema": {
-                  "value": "@activity('lookup_meta_data').output.value[0].source_schema",
+                  "value": "@variables('source_schema')",
                   "type": "Expression"
                 },
                 "table": {
-                  "value": "@activity('lookup_meta_data').output.value[0].source_table",
+                  "value": "@variables('source_table')",
                   "type": "Expression"
                 }
               },
@@ -36,8 +36,9 @@
           },
           "sink": {
             "type": "DataWarehouseSink",
+            "tableOption": "autoCreate",
             "preCopyScript": {
-              "value": "truncate table\n@activity('lookup_meta_data').output.value[0].target_schema.\n@activity('lookup_meta_data').output.value[0].target_table",
+              "value": "@concat(\n    'if object_id(''',\n        variables('target_schema'), '.',\n        variables('target_table'),\n        ''', ''U'') is not null ',\n    'truncate table ',\n        variables('target_schema'), '.',\n        variables('target_table')\n)",
               "type": "Expression"
             },
             "allowCopyCommand": true,
@@ -46,11 +47,11 @@
               "type": "DataWarehouseTable",
               "typeProperties": {
                 "schema": {
-                  "value": "@activity('lookup_meta_data').output.value[0].target_schema",
+                  "value": "@variables('target_schema')",
                   "type": "Expression"
                 },
                 "table": {
-                  "value": "@activity('lookup_meta_data').output.value[0].target_table",
+                  "value": "@variables('target_table')",
                   "type": "Expression"
                 }
               },
@@ -90,7 +91,25 @@
         "name": "task",
         "dependsOn": [
           {
-            "activity": "lookup_meta_data",
+            "activity": "set_target_schema",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "set_target_table",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "set_source_schema",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "set_source_table",
             "dependencyConditions": [
               "Succeeded"
             ]
@@ -102,7 +121,7 @@
         "typeProperties": {
           "source": {
             "type": "FabricSqlDatabaseSource",
-            "sqlReaderStoredProcedureName": "[dbo].[get_task_pokemon_api]",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_identity_transfer]",
             "storedProcedureParameters": {
               "task_id": {
                 "value": {
@@ -145,23 +164,123 @@
         },
         "name": "lookup_meta_data",
         "dependsOn": []
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "target_schema",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.target_path,\n        activity('lookup_meta_data').output.value[0].target_path\n        ),\n    '/'\n)[2]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_target_schema",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "target_table",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.target_path,\n        activity('lookup_meta_data').output.value[0].target_path\n        ),\n    '/'\n)[3]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_target_table",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "source_schema",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.source_path,\n        activity('lookup_meta_data').output.value[0].source_path\n        ),\n    '/'\n)[3]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_source_schema",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "source_table",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.source_path,\n        activity('lookup_meta_data').output.value[0].source_path\n        ),\n    '/'\n)[4]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_source_table",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
       }
     ],
     "parameters": {
       "task_id": {
         "type": "string"
       },
-      "target_schema": {
+      "target_path": {
         "type": "string"
+      },
+      "source_path": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "target_schema": {
+        "type": "String"
       },
       "target_table": {
-        "type": "string"
+        "type": "String"
       },
       "source_schema": {
-        "type": "string"
+        "type": "String"
       },
       "source_table": {
-        "type": "string"
+        "type": "String"
       }
     }
   }

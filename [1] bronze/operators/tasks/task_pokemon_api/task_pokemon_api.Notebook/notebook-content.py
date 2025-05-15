@@ -22,7 +22,7 @@
 
 # CELL ********************
 
-%run get_pokemon_api
+%run extract_pokemon_api
 
 # METADATA ********************
 
@@ -56,7 +56,7 @@ resource = 'berry'
 
 # CELL ********************
 
-json_list = get_pokemon_api(resource)
+json_list = extract_pokemon_api(resource)
 
 # METADATA ********************
 

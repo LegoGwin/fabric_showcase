@@ -75,7 +75,7 @@ def get_resource_urls(resource):
 
 # CELL ********************
 
-def get_pokemon_api(resource):
+def extract_pokemon_api(resource):
     results = []
     urls = get_resource_urls(resource)
     

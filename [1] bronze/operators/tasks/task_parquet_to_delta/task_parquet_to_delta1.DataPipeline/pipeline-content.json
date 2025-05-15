@@ -6,7 +6,7 @@
         "typeProperties": {
           "source": {
             "type": "FabricSqlDatabaseSource",
-            "sqlReaderStoredProcedureName": "[dbo].[get_task_json_to_delta]",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_parquet_to_delta]",
             "storedProcedureParameters": {
               "task_id": {
                 "value": {
@@ -53,7 +53,7 @@
       {
         "type": "TridentNotebook",
         "typeProperties": {
-          "notebookId": "d9e36c11-1dbe-b367-4268-fe33dedd89e3",
+          "notebookId": "b470a3b8-04b0-833d-4ef1-fba3783f5377",
           "workspaceId": "00000000-0000-0000-0000-000000000000",
           "parameters": {
             "target_path": {
@@ -66,20 +66,6 @@
             "source_path": {
               "value": {
                 "value": "@coalesce(\n    pipeline().parameters.source_path,\n    activity('lookup_meta_data').output.value[0].source_path\n)",
-                "type": "Expression"
-              },
-              "type": "string"
-            },
-            "flatten_mode": {
-              "value": {
-                "value": "@coalesce(\n    pipeline().parameters.flatten_mode,\n    activity('lookup_meta_data').output.value[0].flatten_mode\n)",
-                "type": "Expression"
-              },
-              "type": "string"
-            },
-            "flatten_settings": {
-              "value": {
-                "value": "@coalesce(\n    pipeline().parameters.flatten_settings,\n    string(activity('lookup_meta_data_flatten').output.value)\n)",
                 "type": "Expression"
               },
               "type": "string"
@@ -109,12 +95,6 @@
             ]
           },
           {
-            "activity": "lookup_meta_data_flatten",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          },
-          {
             "activity": "lookup_meta_data_dynamic",
             "dependencyConditions": [
               "Succeeded"
@@ -125,7 +105,7 @@
       {
         "type": "SqlServerStoredProcedure",
         "typeProperties": {
-          "storedProcedureName": "[dbo].[update_task_json_to_delta_dynamic]",
+          "storedProcedureName": "[dbo].[update_task_parquet_to_delta_dynamic]",
           "storedProcedureParameters": {
             "task_id": {
               "value": {
@@ -179,56 +159,7 @@
         "typeProperties": {
           "source": {
             "type": "FabricSqlDatabaseSource",
-            "sqlReaderStoredProcedureName": "[dbo].[get_task_json_to_delta_flatten]",
-            "storedProcedureParameters": {
-              "task_id": {
-                "value": {
-                  "value": "@pipeline().parameters.task_id",
-                  "type": "Expression"
-                },
-                "type": "String"
-              }
-            },
-            "partitionOption": "None",
-            "queryTimeout": "02:00:00"
-          },
-          "datasetSettings": {
-            "type": "FabricSqlDatabaseTable",
-            "schema": [],
-            "connectionSettings": {
-              "name": "meta_data",
-              "properties": {
-                "type": "FabricSqlDatabase",
-                "typeProperties": {
-                  "artifactId": "9d2f8001-d815-9d78-4d76-6f10d6cac2ad",
-                  "workspaceId": "00000000-0000-0000-0000-000000000000"
-                },
-                "externalReferences": {
-                  "connection": "5ce2552f-bda6-4456-8df2-5b8dc7c3fb77"
-                },
-                "annotations": []
-              }
-            },
-            "annotations": []
-          },
-          "firstRowOnly": false
-        },
-        "policy": {
-          "timeout": "0.12:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 30,
-          "secureInput": false,
-          "secureOutput": false
-        },
-        "name": "lookup_meta_data_flatten",
-        "dependsOn": []
-      },
-      {
-        "type": "Lookup",
-        "typeProperties": {
-          "source": {
-            "type": "FabricSqlDatabaseSource",
-            "sqlReaderStoredProcedureName": "[dbo].[get_task_json_to_delta_dynamic]",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_parquet_to_delta_dynamic]",
             "storedProcedureParameters": {
               "task_id": {
                 "value": {
@@ -281,12 +212,6 @@
         "type": "string"
       },
       "source_path": {
-        "type": "string"
-      },
-      "flatten_mode": {
-        "type": "string"
-      },
-      "flatten_settings": {
         "type": "string"
       },
       "min_partition": {

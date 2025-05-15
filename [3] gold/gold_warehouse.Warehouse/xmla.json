@@ -11,6 +11,292 @@
     },
     "defaultPowerBIDataSourceVersion": "powerBI_V3",
     "sourceQueryCulture": "en-US",
+    "tables": [
+      {
+        "name": "DimPokemonBerry",
+        "sourceLineageTag": "[dbo].[DimPokemonBerry]",
+        "columns": [
+          {
+            "name": "Id",
+            "dataType": "int64",
+            "sourceColumn": "Id",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "Id",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Name",
+            "dataType": "string",
+            "sourceColumn": "Name",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "Name",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "GrowthTime",
+            "dataType": "int64",
+            "sourceColumn": "GrowthTime",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "GrowthTime",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "MaxHarvest",
+            "dataType": "int64",
+            "sourceColumn": "MaxHarvest",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "MaxHarvest",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "NaturalGiftPower",
+            "dataType": "int64",
+            "sourceColumn": "NaturalGiftPower",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "NaturalGiftPower",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Size",
+            "dataType": "int64",
+            "sourceColumn": "Size",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "Size",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Smoothness",
+            "dataType": "int64",
+            "sourceColumn": "Smoothness",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "Smoothness",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "SoilDyrness",
+            "dataType": "int64",
+            "sourceColumn": "SoilDyrness",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "SoilDyrness",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "FirmnessName",
+            "dataType": "string",
+            "sourceColumn": "FirmnessName",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "FirmnessName",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "FirmnessUrl",
+            "dataType": "string",
+            "sourceColumn": "FirmnessUrl",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "FirmnessUrl",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "ItemName",
+            "dataType": "string",
+            "sourceColumn": "ItemName",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "ItemName",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "ItemUrl",
+            "dataType": "string",
+            "sourceColumn": "ItemUrl",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "ItemUrl",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "NaturalGiftTypeName",
+            "dataType": "string",
+            "sourceColumn": "NaturalGiftTypeName",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "NaturalGiftTypeName",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "NaturalGiftTypeUrl",
+            "dataType": "string",
+            "sourceColumn": "NaturalGiftTypeUrl",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "NaturalGiftTypeUrl",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "FlavorPotency",
+            "dataType": "int64",
+            "sourceColumn": "FlavorPotency",
+            "formatString": "0",
+            "sourceProviderType": "int",
+            "sourceLineageTag": "FlavorPotency",
+            "summarizeBy": "sum",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "FlavorName",
+            "dataType": "string",
+            "sourceColumn": "FlavorName",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "FlavorName",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "FlavorUrl",
+            "dataType": "string",
+            "sourceColumn": "FlavorUrl",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "FlavorUrl",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Partition",
+            "dataType": "string",
+            "sourceColumn": "Partition",
+            "sourceProviderType": "varchar",
+            "sourceLineageTag": "Partition",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "{{Partition_Name}}",
+            "mode": "directLake",
+            "source": {
+              "type": "entity",
+              "entityName": "DimPokemonBerry",
+              "expressionSource": "DatabaseQuery",
+              "schemaName": "dbo"
+            }
+          }
+        ],
+        "annotations": [
+          {
+            "name": "IsTableInBiModel",
+            "value": "False"
+          }
+        ]
+      }
+    ],
     "expressions": [
       {
         "name": "DatabaseQuery",

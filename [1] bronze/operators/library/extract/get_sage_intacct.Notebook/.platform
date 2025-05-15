@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
   "metadata": {
     "type": "Notebook",
-    "displayName": "get_pokemon_api",
+    "displayName": "extract_sage_intacct",
     "description": "New notebook"
   },
   "config": {
     "version": "2.0",
-    "logicalId": "284ddcd6-c217-b315-437c-571bde4e19d5"
+    "logicalId": "c322695a-4e70-aa9b-4627-e11f8fd7b746"
   }
 }
