@@ -76,7 +76,7 @@ def read_json_files(logical_path, min_partition = None, multi_line = 'false'):
     df = spark.read \
         .option('primitivesAsString', 'true') \
         .option('samplingRatio', 1) \
-        .option('recusriveFileLookup', 'true') \
+        .option('recursiveFileLookup', 'true') \
         .option('multiLine', multi_line) \
         .json(path)
 
@@ -114,7 +114,7 @@ def read_parquet_files(logical_path, min_partition = None):
 
     df = spark.read \
         .option('mergeSchema', 'true') \
-        .option('recusriveFileLookup', 'true') \
+        .option('recursiveFileLookup', 'true') \
         .parquet(path)
 
     if min_partition:
