@@ -9,7 +9,7 @@ This repository provides a generalized solution for handling common data transfo
 
 The solution is structured around three Lakehouses—**bronze**, **silver**, and **gold**—corresponding to the standard medallion pattern.
 
-From an operational perspective, the architecture is metadata-driven. Each pipeline retrieves its configuration from the `meta_data` SQL database. Currently, the metadata is sourced from an Excel file and refreshed prior to pipeline execution. Orchestration is handled by the `control_jobs` pipeline, which accepts a job ID as a parameter and executes the required sequence of tasks. Execution order is governed by the `dataset_lineage` metadata, which defines table dependencies and allows task batches to ru...
+From an operational perspective, the architecture is metadata-driven. Each pipeline retrieves its configuration from the `meta_data` SQL database. Currently, the metadata is sourced from an Excel file and refreshed prior to pipeline execution. Orchestration is handled by the `control_jobs` pipeline, which accepts a job ID as a parameter and executes the required sequence of tasks. Execution order is governed by the `dataset_lineage` metadata, which defines table dependencies and allows task batches to run in the correct order.
 
 ---
 
