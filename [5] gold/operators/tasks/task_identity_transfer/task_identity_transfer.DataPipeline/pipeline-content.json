@@ -35,16 +35,11 @@
             }
           },
           "sink": {
-            "type": "DataWarehouseSink",
-            "tableOption": "autoCreate",
-            "preCopyScript": {
-              "value": "@concat(\n    'if object_id(''',\n        variables('target_schema'), '.',\n        variables('target_table'),\n        ''', ''U'') is not null ',\n    'truncate table ',\n        variables('target_schema'), '.',\n        variables('target_table')\n)",
-              "type": "Expression"
-            },
-            "allowCopyCommand": true,
-            "copyCommandSettings": {},
+            "type": "LakehouseTableSink",
+            "tableActionOption": "OverwriteSchema",
+            "partitionOption": "None",
             "datasetSettings": {
-              "type": "DataWarehouseTable",
+              "type": "LakehouseTable",
               "typeProperties": {
                 "schema": {
                   "value": "@variables('target_schema')",
@@ -57,13 +52,13 @@
               },
               "schema": [],
               "linkedService": {
-                "name": "gold_warehouse",
+                "name": "gold_lakehouse",
                 "properties": {
-                  "type": "DataWarehouse",
+                  "type": "Lakehouse",
                   "typeProperties": {
-                    "artifactId": "a671df4a-ca2a-451a-ace0-9af8862d30fd",
-                    "endpoint": "64k76qoso54upbqqkmfdnabrny-ndyrahpalz7urp5ujpd6t7nwvm.datawarehouse.fabric.microsoft.com",
-                    "workspaceId": "1d10f168-5ee0-487f-bfb4-4bc7e9fdb6ab"
+                    "artifactId": "96d3db9d-aa33-b773-461e-8db631d88d62",
+                    "workspaceId": "00000000-0000-0000-0000-000000000000",
+                    "rootFolder": "Tables"
                   },
                   "annotations": []
                 }
@@ -79,7 +74,7 @@
               "treatBooleanAsNumber": false
             }
           },
-          "enableStaging": true
+          "enableStaging": false
         },
         "policy": {
           "timeout": "0.12:00:00",
