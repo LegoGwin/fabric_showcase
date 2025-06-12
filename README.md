@@ -9,7 +9,9 @@ This repository provides a generalized solution for handling common data transfo
 
 The solution is structured around three Lakehouses—**bronze**, **silver**, and **gold**—corresponding to the standard medallion pattern.
 
-From an operational perspective, the architecture is metadata-driven. Each pipeline retrieves its configuration from the `meta_data` SQL database. Currently, the metadata is sourced from an Excel file and refreshed prior to pipeline execution. Orchestration is handled by the `control_jobs` pipeline, which accepts a job ID as a parameter and executes the required sequence of tasks. Execution order is governed by the `dataset_lineage` metadata, which defines table dependencies and allows task batches to run in the correct order.
+From an operational perspective, the architecture is metadata-driven. Each pipeline retrieves its configuration from the `meta_data` SQL database. Currently, the metadata is sourced from an Excel file and refreshed prior to pipeline execution. Orchestration is handled by the `control_jobs` pipeline, which accepts a job ID as a parameter and executes the required sequence of tasks. Execution order is governed by the `dataset_lineage` metadata, which defines table dependencies and allows task batches to ru...
+
+---
 
 ### 📊 Sample: `dataset_lineage` Metadata
 
@@ -18,9 +20,36 @@ This table defines dependencies between datasets to ensure proper task execution
 ```text
 | dataset_path                                              		| parent_path                                                 		|
 |-----------------------------------------------------------------------|-----------------------------------------------------------------------|
-| lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry 	|                                                            	 	|
+| lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry 	|                                                             		|
 | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/pokemon 	|                                                          		|
 | deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry 	| lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry 	|
+```
+
+---
+
+### 🧩 Sample: `control_tasks` Metadata
+
+This table defines the characteristics of each task and the dataset it targets:
+
+```text
+| task_id             | dataset_path                                                  	| is_active | stage_name | lineage_name |
+|---------------------|-----------------------------------------------------------------|-----------|------------|---------------|
+| task_pokemon_api:1  | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry  | 1         | raw        | berry         |
+| task_pokemon_api:2  | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/pokemon| 1         | bronze     | berry         |
+| task_json_to_delta:1| deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry	| 1         | raw        | pokemon       |
+```
+
+---
+
+### 🧪 Sample: `control_jobs` Metadata
+
+This table defines how jobs query task definitions dynamically using SQL:
+
+```text
+| job_id | job_name     | task_sql                                                               |
+|--------|--------------|------------------------------------------------------------------------|
+| 1      | active_tasks | select [task_id] from [dbo].[control_tasks] where [is_active] = 1      |
+| 2      | raw_tasks    | select [task_id] from [dbo].[control_tasks] where [stage_name] = 'raw' |
 ```
 
 ---
@@ -31,7 +60,7 @@ The **files section** of the bronze Lakehouse contains raw data ingested in its 
 
 The **tables section** of the bronze layer contains flattened versions of the data, where column names are cleaned and all values are typed as strings.
 
-For demo purposes, the solution includes a dummy connector to the Pokémon API. A sample pipeline extracts JSON data and lands it in the bronze files section for testing.
+For demo purposes, the solution includes a dummy connector to the Pokémon API that extracts JSON data and lands it in the bronze files section for testing.
 
 Two general-purpose pipelines are provided in the bronze layer:
 
