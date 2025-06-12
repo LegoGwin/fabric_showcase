@@ -71,12 +71,11 @@ def text_list_to_files(text_list, logical_path):
 # CELL ********************
 
 def read_json_files(logical_path, min_partition = None, multi_line = 'false'):
-    path = get_lakehouse_path('relative',logical_path)
+    path = get_lakehouse_path('abfs',logical_path)
 
     df = spark.read \
         .option('primitivesAsString', 'true') \
         .option('samplingRatio', 1) \
-        .option('recursiveFileLookup', 'true') \
         .option('multiLine', multi_line) \
         .json(path)
 
@@ -114,7 +113,6 @@ def read_parquet_files(logical_path, min_partition = None):
 
     df = spark.read \
         .option('mergeSchema', 'true') \
-        .option('recursiveFileLookup', 'true') \
         .parquet(path)
 
     if min_partition:

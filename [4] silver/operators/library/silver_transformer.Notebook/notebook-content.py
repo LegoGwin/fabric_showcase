@@ -18,7 +18,7 @@
 
 import json
 import re
-from pyspark.sql.functions import col, to_timestamp, from_utc_timestamp, to_utc_timestamp, max as sql_max, row_number
+from pyspark.sql.functions import col, to_timestamp, from_utc_timestamp, to_utc_timestamp, max as sql_max, row_number, to_date
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 from functools import reduce
