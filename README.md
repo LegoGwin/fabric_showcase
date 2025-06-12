@@ -1,90 +1,53 @@
-Microsoft Fabric Showcase
 
-This repository contains a reusable data engineering framework built on Microsoft Fabric using PySpark, Delta Lake, and metadata-driven transformations. It implements a medallion architecture (Bronze, Silver, Gold layers) and supports scalable, maintainable pipeline patterns suitable for enterprise workloads.
+# Microsoft Fabric Medallion Architecture Library
 
-📐 Architecture Overview
+This repository provides a generalized solution for handling common data transformation and ingestion tasks in a **Microsoft Fabric medallion architecture**.
 
-[Source APIs / Files]
-        ↓
-     [Bronze Layer]  ← Ingest raw JSON, Parquet, or API data
-        ↓
-     [Silver Layer]  ← Apply metadata-driven cleaning and transformation
-        ↓
-      [Gold Layer]   ← Join, aggregate, and prepare for reporting
+---
 
-Bronze Layer: Raw data is landed with minimal processing.
+## 🏗️ Architecture Overview
 
-Silver Layer: Cleansing, deduplication, and business rules are applied using a configurable column map.
+The solution is structured around three Lakehouses—**bronze**, **silver**, and **gold**—corresponding to the standard medallion pattern.
 
-Gold Layer: Optional layer for modeling, joining, or reporting.
+From an operational perspective, the architecture is metadata-driven. Each pipeline retrieves its configuration from the `meta_data` SQL database. Currently, the metadata is sourced from an Excel file and refreshed prior to pipeline execution. Orchestration is handled by the `control_jobs` pipeline, which accepts a job ID as a parameter and executes the required sequence of tasks. Execution order is governed by the `dataset_lineage` metadata, which defines table dependencies and allows task batches to run in the correct order.
 
-🚀 Demo Notebook (Coming Soon)
+---
 
-A runnable demo will be added to simulate:
+## 🪙 Bronze Layer
 
-Ingesting mock data
+The **files section** of the bronze Lakehouse contains raw data ingested in its original source format. Even JDBC sources are staged in the files area to avoid naming and compatibility issues. These datasets are append-only and partitioned by the extraction timestamp in `yyyyMMddHHmmss` format.
 
-Applying transformations
+The **tables section** of the bronze layer contains flattened versions of the data, where column names are cleaned and all values are typed as strings.
 
-Showing the final DataFrame output
+For demo purposes, the solution includes a dummy connector to the Pokémon API. A sample pipeline extracts JSON data and lands it in the bronze files section for testing.
 
-This is useful to show the framework in action without requiring external APIs.
+Two general-purpose pipelines are provided in the bronze layer:
 
-🔁 Core Components
+- `json_to_delta`
+- `parquet_to_delta`
 
-Folder
+These pipelines reliably and securely transfer data from the files section to the tables section.
 
-Description
+---
 
-[0] master
+## 🥈 Silver Layer
 
-Control jobs for orchestrating pipelines
+The silver layer begins full-scale data cleaning and transformation. Only the **tables section** is used in this layer.
 
-[1] multi
+The process is managed by a single pipeline: `task_update_silver`. This pipeline supports a wide range of transformations, including:
 
-Shared maintenance and configuration logic
+- Deduplication using primary keys or batch keys
+- Column selection and type casting
+- Expression-based column creation
+- Row-level filtering
+- Insert strategies including append, overwrite, primary key merge, and batch merge
 
-[2] bronze
+At this stage, the data is intended to closely reflect the source system’s structure, with potential upgrades for single-row enhancements.
 
-Ingestion notebooks and pipelines
+---
 
-[3] silver
+## 🥇 Gold Layer
 
-Transformation logic using column maps
+The gold layer is currently a placeholder, with a single Lakehouse leveraging only the **tables section**.
 
-[4] gold
-
-(Optional) Aggregation layer
-
-[a] testing
-
-Testing and stubbed utilities
-
-📁 Example: Metadata-Driven Transformation
-
-Your column_map JSON controls:
-
-Data type casting
-
-Timestamp formatting
-
-Primary key & batch deduplication
-
-Output selection
-
-This makes transformations declarative and repeatable across datasets.
-
-📦 Future Enhancements
-
-Add a complete demo_run.Notebook
-
-Include Power BI visuals or export steps
-
-Create robust error logging and retry support
-
-📬 Contact / Credit
-
-Built by a data engineering consultant experienced in Fabric, Power BI, and scalable lakehouse solutions.
-
-Feel free to fork this repo or reach out with questions!
-
+A basic passthrough pipeline is included to transfer data unmodified from silver to gold. Work is in progress to implement standard pipelines for **Slowly Changing Dimensions (SCD)** and other common gold-layer patterns.
