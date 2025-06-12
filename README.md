@@ -85,7 +85,7 @@ The process is managed by a single pipeline: `task_update_silver`. This pipeline
 
 At this stage, the data is intended to closely reflect the source system’s structure, with potential upgrades for single-row enhancements.
 
-### 📊 Sample: `silver_columns` Metadata
+### 📊 Sample: `task_update_silver_schema` Metadata
 
 This table defines the transformation logic for the `task_update_silver` pipeline:
 
