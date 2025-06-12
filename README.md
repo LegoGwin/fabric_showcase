@@ -27,7 +27,7 @@ This table defines dependencies between datasets to ensure proper task execution
 
 ---
 
-### 🧩 Sample: `control_tasks` Metadata
+### 📊 Sample: `control_tasks` Metadata
 
 This table defines the characteristics of each task and the dataset it targets:
 
@@ -41,7 +41,7 @@ This table defines the characteristics of each task and the dataset it targets:
 
 ---
 
-### 🧪 Sample: `control_jobs` Metadata
+### 📊 Sample: `control_jobs` Metadata
 
 This table defines how jobs query task definitions dynamically using SQL:
 
