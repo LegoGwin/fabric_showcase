@@ -19,7 +19,7 @@ The **files section** of the bronze Lakehouse contains raw data ingested in its 
 
 The **tables section** of the bronze layer contains flattened versions of the data, where column names are cleaned and all values are typed as strings.
 
-For demo purposes, the solution includes a dummy connector to the Pokémon API. A sample pipeline extracts JSON data and lands it in the bronze files section for testing.
+For demo purposes, the solution includes a dummy connector to the Pokémon API, a sample pipeline that extracts JSON data and lands it in the bronze files section for testing.
 
 Two general-purpose pipelines are provided in the bronze layer:
 
