@@ -22,9 +22,6 @@
 
 # CELL ********************
 
-# Welcome to your new notebook
-# Type here in the cell editor to add code!
-
 
 # METADATA ********************
 
@@ -47,10 +44,20 @@
 # PARAMETERS CELL ********************
 
 source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry'
-target_path = ''
-extract_date_col = 'extract_date'
+target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/berry'
 min_extract_date = '2025-01-01'
 column_map = ''
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def get_df_distinct(df, primary_keys, business_keys, extract_column)
 
 # METADATA ********************
 
