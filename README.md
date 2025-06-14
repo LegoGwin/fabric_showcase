@@ -115,6 +115,10 @@ There is also a basic passthrough pipeline to transfer data unmodified from silv
 
 Work is in progress to implement other standard gold-layer patterns.
 
+### 🚀 Usage Overview
+
+This solution enables metadata-driven orchestration of pipelines within a Microsoft Fabric medallion architecture. The system is modular, extensible, and supports dependency-aware scheduling across multiple pipelines.
+
 **To use this framework:**
 
 1. **Configure task-level metadata**  
