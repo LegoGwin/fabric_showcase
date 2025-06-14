@@ -102,4 +102,15 @@ This table defines the transformation logic for the `task_update_silver` pipelin
 
 The gold layer is implemented with a lakehouse named gold_lakehouse. The gold layer is meant to be the source of data used for reporting via tools such as Power BI. The data here is denormalized and includes constructions like slowly changing dimensions, snapshot fact tables, running total fact tables, aggregegations, and so on. 
 
-Currently, there is a standard pipeline for slowly changing dimensions type 2 and a basic passthrough pipeline to transfer data unmodified from silver to gold. Work is in progress to implement other standard gold-layer patterns.
+Currently, there is a standard pipeline for slowly changing dimensions type 2 that leverages the meta-data shown below.
+
+### 📊 Sample: `task_create_scd2_schema` Metadata
+| task_id           | column_name | is_primary_key | is_business_key | is_date_key |
+|------------------|-------------|----------------|------------------|-------------|
+| task_create_scd2:1 | Id          | 1              | 0                | 0           |
+| task_create_scd2:1 | Name        | 0              | 1                | 0           |
+| task_create_scd2:1 | ExtractDate | 0              | 0                | 1           |
+
+There is also a basic passthrough pipeline to transfer data unmodified from silver to gold.
+
+Work is in progress to implement other standard gold-layer patterns.
