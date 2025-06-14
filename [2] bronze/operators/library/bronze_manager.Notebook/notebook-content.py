@@ -165,12 +165,9 @@ def dataframe_to_table(df, logical_path):
 # CELL ********************
 
 def get_max_partition(df):
-    max_partition = (
-        df
-        .select(sql_max(col(partition_name)).alias(partition_name))
-        .collect()[0][partition_name]
-    )
-    return max_partition
+    result = df.select(sql_max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
+    
+    return result
 
 # METADATA ********************
 
