@@ -89,12 +89,12 @@ At this stage, the data is intended to closely reflect the source system’s str
 
 This table defines the transformation logic for the `task_update_silver` pipeline:
 
-```text
+
 | task_id             | expression | column_type | column_name | column_order | is_filter | is_primary_key | is_batch_key | is_order_by | is_output | is_partition_by |
 |---------------------|------------|-------------|-------------|--------------|-----------|----------------|--------------|-------------|-----------|------------------|
 | task_update_silver:1| id         | int         | Id          | 1            | 0         | 1              | 0            | 0           | 1         | 0                |
 | task_update_silver:1| name       | string      | Name        | 2            | 0         | 0              | 0            | 0           | 1         | 0                |
-```
+
 
 ---
 
