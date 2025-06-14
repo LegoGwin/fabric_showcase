@@ -124,8 +124,7 @@ This solution enables metadata-driven orchestration of pipelines within a Micros
 **To use this framework:**
 
 1. **Configure task-level metadata**  
-   Each task pipeline (e.g., bronze ingestion, SCD2 processing) has its **own dedicated metadata table** (e.g., `task_json_to_delta`, `task_update_silver_schema`).  
-   You must configure these tables with the information about the task to perform.
+   Each task pipeline (e.g., bronze ingestion, SCD2 processing) has its **own dedicated metadata table** (e.g., `task_json_to_delta`, `task_update_silver_schema`). You must configure these tables with the information about the task to perform.
 
 2. **Configure scheduling metadata**  
    Once individual task metadata is in place, define scheduling rules:
