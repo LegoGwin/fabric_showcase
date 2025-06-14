@@ -115,18 +115,17 @@ There is also a basic passthrough pipeline to transfer data unmodified from silv
 
 Work is in progress to implement other standard gold-layer patterns.
 
-### 🚀 Usage Overview
+---
+
+## 🚀 Usage Overview
 
 This solution enables metadata-driven orchestration of pipelines within a Microsoft Fabric medallion architecture. The system is modular, extensible, and supports dependency-aware scheduling across multiple pipelines.
 
 **To use this framework:**
 
 1. **Configure task-level metadata**  
-   Each task pipeline (e.g., bronze ingestion, SCD2 processing) has its **own dedicated metadata table** (e.g., `bronze_tasks`, `scd2_tasks`).  
-   You must configure:
-   - Dataset path and target location
-   - Required columns and transformations
-   - Business keys, primary keys, and date keys (if applicable)
+   Each task pipeline (e.g., bronze ingestion, SCD2 processing) has its **own dedicated metadata table** (e.g., `task_json_to_delta`, `task_update_silver_schema`).  
+   You must configure these tables with the information about the task to perform.
 
 2. **Configure scheduling metadata**  
    Once individual task metadata is in place, define scheduling rules:
@@ -142,6 +141,6 @@ This solution enables metadata-driven orchestration of pipelines within a Micros
 
 4. **Review output**  
    - `bronze` stores raw staged data (often file-based)
-   - `silver` holds cleaned, enriched, and conformed data (e.g., SCD2 outputs)
+   - `silver` holds cleaned, enriched, and conformed data (e.g., pre-SCD2 outputs)
    - `gold` contains final analytical tables like facts and dimensions
 """
