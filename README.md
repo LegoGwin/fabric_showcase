@@ -114,3 +114,30 @@ Currently, there is a standard pipeline for slowly changing dimensions type 2 th
 There is also a basic passthrough pipeline to transfer data unmodified from silver to gold.
 
 Work is in progress to implement other standard gold-layer patterns.
+
+**To use this framework:**
+
+1. **Configure task-level metadata**  
+   Each task pipeline (e.g., bronze ingestion, SCD2 processing) has its **own dedicated metadata table** (e.g., `bronze_tasks`, `scd2_tasks`).  
+   You must configure:
+   - Dataset path and target location
+   - Required columns and transformations
+   - Business keys, primary keys, and date keys (if applicable)
+
+2. **Configure scheduling metadata**  
+   Once individual task metadata is in place, define scheduling rules:
+   - `control_tasks` — maps task metadata tables to runnable task IDs
+   - `control_jobs` — maps job IDs to lists of tasks using SQL expressions
+   - `dataset_lineage` — defines dependency chains between datasets to enforce proper batch execution
+
+3. **Run the `control_jobs` pipeline**  
+   Execute the orchestration by passing a job ID. This will:
+   - Query `control_jobs` to find relevant task IDs
+   - Order tasks based on dependency levels (`dataset_lineage`)
+   - Dynamically route each task to its respective pipeline logic (e.g., notebook, SQL, operator)
+
+4. **Review output**  
+   - `bronze` stores raw staged data (often file-based)
+   - `silver` holds cleaned, enriched, and conformed data (e.g., SCD2 outputs)
+   - `gold` contains final analytical tables like facts and dimensions
+"""
