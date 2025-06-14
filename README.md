@@ -17,13 +17,13 @@ From an operational perspective, the architecture is metadata-driven. Each pipel
 
 This table defines dependencies between datasets to ensure proper task execution ordering:
 
-```text
+
 | dataset_path                                              		| parent_path                                                 		|
 |-----------------------------------------------------------------------|-----------------------------------------------------------------------|
 | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry 	|                                                             		|
 | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/pokemon 	|                                                          		|
 | deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry 	| lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry 	|
-```
+
 
 ---
 
@@ -31,13 +31,13 @@ This table defines dependencies between datasets to ensure proper task execution
 
 This table defines the characteristics of each task and the dataset it targets:
 
-```text
+
 | task_id             | dataset_path                                                  	| is_active | stage_name | lineage_name |
 |---------------------|-----------------------------------------------------------------|-----------|------------|---------------|
 | task_pokemon_api:1  | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry  | 1         | raw        | berry         |
 | task_pokemon_api:2  | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/pokemon| 1         | bronze     | berry         |
 | task_json_to_delta:1| deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry	| 1         | raw        | pokemon       |
-```
+
 
 ---
 
@@ -45,12 +45,12 @@ This table defines the characteristics of each task and the dataset it targets:
 
 This table defines how jobs query task definitions dynamically using SQL:
 
-```text
+
 | job_id | job_name     | task_sql                                                               |
 |--------|--------------|------------------------------------------------------------------------|
 | 1      | active_tasks | select [task_id] from [dbo].[control_tasks] where [is_active] = 1      |
 | 2      | raw_tasks    | select [task_id] from [dbo].[control_tasks] where [stage_name] = 'raw' |
-```
+
 
 ---
 
