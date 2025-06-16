@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "task_create_scd2"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "b00e18c2-be77-a175-440d-8d7b8ca9024c"
+  }
+}

@@ -46,9 +46,10 @@ import pyspark.sql.functions as F
 
 # PARAMETERS CELL ********************
 
-source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry_history'
 target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry'
-column_map = """
+source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry_history'
+full_refresh = 'false'
+schema = """
         [
             {
                 "column_name": "Id",
@@ -77,7 +78,6 @@ column_map = """
         ]
     """
 min_partition = None
-full_refresh = 'false'
 
 # METADATA ********************
 
@@ -204,12 +204,9 @@ def format_silver_scd2(df, primary_keys, business_keys, max_primary_key):
 
 # CELL ********************
 
-def union_scd2(df_source, df_target, primary_keys, date_key):
-    if df_target:
-        df = df_target.select(df_source.columns).unionByName(df_source)
-    else:
-        df = df_source
-    
+def union_scd2(df_source, df_target, primary_keys, date_key, max_primary_key):
+    df = df.withColumn(row_hash_col, F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256))
+
     # Step 2: Assign group based on lead(row_hash) != current
     w_ordered = Window.partitionBy(*primary_keys).orderBy(date_key)
     df = df.withColumn("prev_row_hash", F.lag(row_hash_col).over(w_ordered))
@@ -228,6 +225,10 @@ def union_scd2(df_source, df_target, primary_keys, date_key):
     df = df.withColumn(valid_to_col, F.lead(valid_from_col).over(group_window2))
 
     df = df.withColumn(is_current_col, F.when(F.col(valid_to_col).isNull(), F.lit(True)).otherwise(F.lit(False)))
+
+    window = Window.orderBy(*primary_keys)
+    starting_id = max_primary_key + 1
+    df = df.withColumn(scd_key_col, F.row_number().over(window) + starting_id - 1)
 
     df = df.drop('prev_row_hash', 'hash_change', 'group_id')
 
@@ -261,7 +262,7 @@ def write_scd2(df, logical_path):
 
 df_source = read_silver_scd2(source_path)
 df_target = read_gold_scd2(target_path)
-jcolumn_map = get_json_map(column_map)
+jcolumn_map = get_json_map(schema)
 max_primary_key = get_max_primary_key(df_target)
 df_source2 = format_silver_scd2(df_source, get_primary_keys(jcolumn_map), get_business_keys(jcolumn_map), max_primary_key)
 df_source3 = union_scd2(df_source2, df_target, get_primary_keys(jcolumn_map), get_date_keys(jcolumn_map))
