@@ -32,11 +32,11 @@ This table defines dependencies between datasets to ensure proper task execution
 This table defines the characteristics of each task and the dataset it targets:
 
 
-| task_id             | dataset_path                                                  	| is_active | stage_name | lineage_name |
-|---------------------|-----------------------------------------------------------------|-----------|------------|---------------|
-| task_pokemon_api:1  | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry  | 1         | raw        | berry         |
-| task_pokemon_api:2  | lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/pokemon| 1         | bronze     | berry         |
-| task_json_to_delta:1| deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry	| 1         | raw        | pokemon       |
+| task_id             | is_active | stage_name | lineage_name |
+|---------------------|-----------|------------|---------------|
+| task_pokemon_api:1  | 1         | raw        | berry         |
+| task_pokemon_api:2  | 1         | bronze     | berry         |
+| task_json_to_delta:1| 1         | raw        | pokemon       |
 
 
 ---
