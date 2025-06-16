@@ -1,5 +1,19 @@
 {
   "properties": {
-    "activities": []
+    "activities": [
+      {
+        "name": "placeholder",
+        "type": "Wait",
+        "dependsOn": [],
+        "typeProperties": {
+          "waitTimeInSeconds": 1
+        }
+      }
+    ],
+    "parameters": {
+      "task_id": {
+        "type": "string"
+      }
+    }
   }
 }

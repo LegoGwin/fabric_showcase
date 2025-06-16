@@ -113,6 +113,131 @@
                         "dependsOn": []
                       }
                     ]
+                  },
+                  {
+                    "value": "task_parquet_to_delta",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": {
+                              "value": "@item().task_id",
+                              "type": "Expression"
+                            }
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "d7d34efb-7139-8cb3-437c-2f7b8e6e0292",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_parquet_to_delta",
+                        "dependsOn": []
+                      }
+                    ]
+                  },
+                  {
+                    "value": "task_create_dimension",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": {
+                              "value": "@item().task_id",
+                              "type": "Expression"
+                            }
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "ae25d4dd-1734-b70c-465a-06c205fa4b2b",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_create_dimension",
+                        "dependsOn": []
+                      }
+                    ]
+                  },
+                  {
+                    "value": "task_create_scd2",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": "@item().task_id"
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "b00e18c2-be77-a175-440d-8d7b8ca9024c",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_create_scd2",
+                        "dependsOn": []
+                      }
+                    ]
+                  },
+                  {
+                    "value": "task_identity_transfer",
+                    "activities": [
+                      {
+                        "type": "InvokePipeline",
+                        "typeProperties": {
+                          "parameters": {
+                            "task_id": {
+                              "value": "@item().task_id",
+                              "type": "Expression"
+                            }
+                          },
+                          "waitOnCompletion": true,
+                          "workspaceId": "00000000-0000-0000-0000-000000000000",
+                          "pipelineId": "9659af00-0f3b-bd8e-445a-7349208ff09c",
+                          "operationType": "InvokeFabricPipeline"
+                        },
+                        "externalReferences": {
+                          "connection": "8fef9e14-edce-418d-8127-dbfa89062ce1"
+                        },
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureInput": false,
+                          "secureOutput": false
+                        },
+                        "name": "task_identity_transfer",
+                        "dependsOn": []
+                      }
+                    ]
                   }
                 ],
                 "defaultActivities": [
