@@ -1,6 +1,5 @@
 CREATE TABLE [dbo].[control_tasks] (
     [task_id]      VARCHAR (256) NULL,
-    [dataset_path] VARCHAR (256) NULL,
     [is_active]    BIT           NULL,
     [stage_name]   VARCHAR (64)  NULL,
     [lineage_name] VARCHAR (64)  NULL,

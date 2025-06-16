@@ -11,9 +11,12 @@ begin
     with [filtered] as
     (
         select
-            [tasks].*
+            [tasks].[task_id],
+            [ctt].[dataset_path]
         from
             [dbo].[control_tasks] as [tasks]
+            left join [dbo].[control_task_target] as [ctt]
+                on [tasks].[task_id] = [ctt].[task_id]
         where
             [tasks].[task_id] in (select * from #task_ids)
     ),
