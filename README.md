@@ -29,7 +29,7 @@ This table defines dependencies between datasets to ensure proper task execution
 
 ### 📊 Sample: `control_tasks` Metadata
 
-This table defines the characteristics of each task and the dataset it targets:
+This table defines the characteristics of each task. The dataset it targets is computed from a view of the task related metadata:
 
 
 | task_id             | is_active | stage_name | lineage_name |
