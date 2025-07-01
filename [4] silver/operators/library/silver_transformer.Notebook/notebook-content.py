@@ -207,13 +207,17 @@ def get_df_outputs(df, output_list):
 
 def transform_df(df, column_map):
     column_map = get_json_map(column_map)
+    metrics = {}
 
     select_list = get_select_list(column_map)
     df = get_df_selected(df, select_list)
 
+    rows_1 = df.count()
     filter_list = get_filter_list(column_map)
     if filter_list:
         df = get_df_filtered(df, filter_list)
+    rows_2 = df.count()
+    metrics['filtered_rows'] = rows_1 - rows_2
 
     batch_key_list = get_batch_key_list(column_map)
     order_by_list = get_order_by_list(column_map)
@@ -226,6 +230,8 @@ def transform_df(df, column_map):
     
     output_list = get_output_list(column_map)
     df = get_df_outputs(df, output_list)
+
+    print(metrics)
 
     return df
 

@@ -25,6 +25,8 @@
 import json
 from pyspark.sql.window import Window
 import pyspark.sql.functions as F
+from pyspark.sql import DataFrame
+from delta.tables import DeltaTable
 
 # METADATA ********************
 
@@ -46,7 +48,7 @@ import pyspark.sql.functions as F
 
 # PARAMETERS CELL ********************
 
-target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry'
+target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry2'
 source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry_history'
 full_refresh = 'false'
 schema = """
@@ -88,16 +90,20 @@ min_partition = None
 
 # CELL ********************
 
-catalog_path = get_deltalake_path('api', target_path)
 full_refresh = full_refresh.strip().lower() == 'true'
+
+catalog_path = get_deltalake_path('api', target_path)
 if not spark.catalog.tableExists(catalog_path):
     full_refresh = True
+    
+if full_refresh:
+    min_partition = None
 
 row_hash_col = 'RowHash'
 valid_from_col = 'ValidFrom'
 valid_to_col = 'ValidTo'
 is_current_col = 'IsCurrent'
-scd_key_col = 'PrimaryKey'
+surrogate_key_col = 'SurrogateKey'
 
 # METADATA ********************
 
@@ -120,7 +126,7 @@ def get_business_keys(column_map):
     result = [column['column_name'] for column in column_map if column.get('is_business_key') == 1]
     return result
 
-def get_date_keys(column_map):
+def get_date_key(column_map):
     result = [column['column_name'] for column in column_map if column.get('is_date_key') == 1][0]
     return result
 
@@ -134,48 +140,25 @@ def get_date_keys(column_map):
 # CELL ********************
 
 def read_silver_scd2(logical_path, partition_by = None, min_partition = None):
-    source_path = get_deltalake_path('abfss', logical_path)
-    df = spark.read.format('delta').load(source_path)
+    abfs_path = get_internal_path('abfs', logical_path)
+    df = spark.read.format('delta').load(abfs_path)
 
     if partition_by and min_partition:
         df = df.filter(col(partition_by) >= min_partition)
 
     return df
 
-# METADATA ********************
+def read_gold_scd2(logical_path, return_type = 'dataframe'):
+    abfs_path = get_internal_path('abfs', logical_path)
 
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-def read_gold_scd2(logical_path):
-    catalog_path = get_deltalake_path('api', logical_path)
-    abfs_path = get_deltalake_path('abfs', logical_path)
-    if spark.catalog.tableExists(catalog_path):
-        df = spark.read.format('delta').load(abfs_path)
+    if return_type == 'dataframe':
+        result = spark.read.format('delta').load(abfs_path)
+    elif return_type == 'delta':
+        result = DeltaTable.forPath(spark, abfs_path)
     else:
-        df = None
+        result = None
 
-    return df
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-def get_max_primary_key(df):
-    try:
-        result = df.select(F.max(scd_key_col).alias("max_pk")).collect()[0]["max_pk"]
-        return int(result) if result is not None else 0
-    except Exception:
-        return 0
+    return result
 
 # METADATA ********************
 
@@ -186,14 +169,117 @@ def get_max_primary_key(df):
 
 # CELL ********************
 
-def format_silver_scd2(df, primary_keys, business_keys, max_primary_key):
-    df = df.withColumn(row_hash_col, F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256))
+def incremental_scd2(source_path, target_path, schema, min_partition):
+    schema = get_json_map(schema)
+    primary_keys = get_primary_keys(schema)
+    business_keys = get_business_keys(schema)
+    date_key = get_date_key(schema)
 
+    df_source = read_silver_scd2(source_path, date_key, min_partition)
+    df_target = read_gold_scd2(target_path, 'dataframe')
+    delta_target = read_gold_scd2(target_path, 'delta')
+
+    source_path = get_internal_path('abfs', source_path)
+    target_path = get_internal_path('abfs', target_path)
+
+    df_updates = prepare_updates(df_source, df_target, primary_keys, business_keys, date_key, valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col)
+    insert_new(df_updates, df_target, target_path, primary_keys)
+    expire_updated(delta_target, df_updates, primary_keys, is_current_col, row_hash_col, valid_to_col, valid_from_col)
+    insert_updated(delta_target, df_updates, primary_keys, is_current_col, row_hash_col, target_path)
+    expire_deleted(delta_target, df_updates, primary_keys, date_key, is_current_col, valid_to_col)
+
+def prepare_updates(df_source, df_target, primary_keys, business_keys, date_key, valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
+    max_date_key = df_source.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+    df_updates = df_source.filter(F.col(date_key) == F.lit(max_date_key))
+
+    df_updates = df_updates.withColumn(valid_from_col, F.lit(max_date_key))
+    df_updates = df_updates.withColumn(valid_to_col, F.lit("9999-12-31").cast("date"))
+    df_updates = df_updates.withColumn(is_current_col, F.lit(True))
+
+    df_updates = df_updates.withColumn(row_hash_col, F.sha2(F.concat_ws('||', *[F.col(c).cast('string') for c in business_keys]), 256))
+
+    max_surrogate_key = df_target.agg(F.max(F.col(surrogate_key_col))).collect()[0][0] or 0
     window = Window.orderBy(*primary_keys)
-    starting_id = max_primary_key + 1
-    df = df.withColumn(scd_key_col, F.row_number().over(window) + starting_id - 1)
+    df_updates = df_updates.withColumn(surrogate_key_col, F.row_number().over(window) + max_surrogate_key)
 
-    return df
+    return df_updates
+
+def insert_new(df_updates, df_target, target_path, primary_keys):
+    current_keys_df = df_target.filter(F.col(is_current_col) == True).select(*primary_keys).distinct()
+
+    new_rows = df_updates.join(current_keys_df, on = primary_keys, how = "left_anti")
+    if not new_rows.isEmpty():
+        new_rows.write.format("delta").mode("append").save(target_path)
+
+def expire_updated(delta_target, df_updates, primary_keys, is_current_col, row_hash_col, valid_to_col, valid_from_col):
+    join_cond = " AND ".join([f"updates.{k} = target.{k}" for k in primary_keys])
+    delta_target.alias("target").merge(
+        source=df_updates.alias("updates"),
+        condition=join_cond,
+    ).whenMatchedUpdate(
+        condition=f"target.{is_current_col} = true AND target.{row_hash_col} != updates.{row_hash_col}",
+        set={
+            valid_to_col: f"updates.{valid_from_col}",
+            is_current_col: "false"
+        }
+    ).execute()
+
+def insert_updated(delta_target, df_updates, primary_keys, is_current_col, row_hash_col, target_table_path):
+    changed_rows = df_updates.alias("updates").join(
+        delta_target.toDF().alias("target"),
+        on=primary_keys,
+        how="inner"
+    ).filter(
+        (F.col(f"target.{is_current_col}") == True) &
+        (F.col(f"target.{row_hash_col}") != F.col(f"updates.{row_hash_col}"))
+    )
+
+    if changed_rows.isEmpty():
+        print("No changed rows to insert.")
+        return
+
+    changed_rows.select(df_updates.columns).write.format("delta").mode("append").save(target_table_path)
+
+def expire_deleted(delta_target, df_updates, primary_keys, date_key, is_current_col, valid_to_col):
+    """
+    Expires target records (sets is_current=false and validto=max_date) when keys in active rows
+    are missing from df_updates (i.e., deletions).
+    Uses DeltaTable.update() instead of appending new records.
+    """
+    max_date = df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+    # Prepare condition: active rows in target whose keys are NOT in current updates
+    current_keys_df = df_updates.select(*primary_keys).distinct()
+    target_df = delta_target.toDF().filter(F.col(is_current_col) == True)
+
+    # Identify keys to expire using anti-join
+    keys_to_expire_df = target_df.join(
+        current_keys_df,
+        on=primary_keys,
+        how="left_anti"
+    ).select(*primary_keys)
+
+    if keys_to_expire_df.isEmpty():
+        print("No deleted records to expire.")
+        return
+
+    # Build condition to match keys to expire
+    expire_cond = " AND ".join([
+        f"target.{k} = expire_keys.{k}" for k in primary_keys
+    ]) + f" AND target.{is_current_col} = true"
+
+    # Create temporary view for join in update
+    keys_to_expire_df.createOrReplaceTempView("expire_keys")
+
+    # Perform update on delta table to expire rows
+    delta_target.alias("target").merge(
+        source=spark.table("expire_keys").alias("expire_keys"),
+        condition=expire_cond
+    ).whenMatchedUpdate(
+        set={
+            valid_to_col: f"CAST('{max_date}' AS DATE)",  # or appropriate type cast
+            is_current_col: "false"
+        }
+    ).execute()
 
 # METADATA ********************
 
@@ -204,7 +290,19 @@ def format_silver_scd2(df, primary_keys, business_keys, max_primary_key):
 
 # CELL ********************
 
-def union_scd2(df_source, df_target, primary_keys, date_key, max_primary_key):
+def full_refresh_scd2(source_path, target_path, schema):
+    schema = get_json_map(schema)
+    primary_keys = get_primary_keys(schema)
+    business_keys = get_business_keys(schema)
+    date_key = get_date_key(schema)
+
+    df_source = read_silver_scd2(source_path)
+    target_path = get_internal_path('abfs', target_path)
+
+    df_updates = prepare_full_refresh(df_source, primary_keys, business_keys, date_key)
+    overwrite_target(df_updates, target_path)
+
+def prepare_full_refresh(df, primary_keys, business_keys, date_key):
     df = df.withColumn(row_hash_col, F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256))
 
     # Step 2: Assign group based on lead(row_hash) != current
@@ -227,29 +325,18 @@ def union_scd2(df_source, df_target, primary_keys, date_key, max_primary_key):
     df = df.withColumn(is_current_col, F.when(F.col(valid_to_col).isNull(), F.lit(True)).otherwise(F.lit(False)))
 
     window = Window.orderBy(*primary_keys)
-    starting_id = max_primary_key + 1
-    df = df.withColumn(scd_key_col, F.row_number().over(window) + starting_id - 1)
+    df = df.withColumn(surrogate_key_col, F.row_number().over(window))
 
     df = df.drop('prev_row_hash', 'hash_change', 'group_id')
 
     return df
 
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-def write_scd2(df, logical_path):
-    relative_path = get_lakehouse_path('relative', logical_path)
-    df.write \
+def overwrite_target(df_updates, target_path):
+    df_updates.write \
         .option('overwriteSchema', 'true') \
         .mode('overwrite') \
         .format('delta') \
-        .save(relative_path)
+        .save(target_path)
 
 # METADATA ********************
 
@@ -260,13 +347,10 @@ def write_scd2(df, logical_path):
 
 # CELL ********************
 
-df_source = read_silver_scd2(source_path)
-df_target = read_gold_scd2(target_path)
-jcolumn_map = get_json_map(schema)
-max_primary_key = get_max_primary_key(df_target)
-df_source2 = format_silver_scd2(df_source, get_primary_keys(jcolumn_map), get_business_keys(jcolumn_map), max_primary_key)
-df_source3 = union_scd2(df_source2, df_target, get_primary_keys(jcolumn_map), get_date_keys(jcolumn_map))
-write_scd2(df_source3, target_path)
+if full_refresh:
+    full_refresh_scd2(source_path, target_path, schema)
+else:
+    incremental_scd2(source_path, target_path, schema, min_partition)
 
 
 # METADATA ********************
