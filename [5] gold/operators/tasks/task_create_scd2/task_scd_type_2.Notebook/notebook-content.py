@@ -267,6 +267,8 @@ def incremental_scd2(source_path, target_path, schema, min_date_key):
     expire_updated(df_updates, delta_target, primary_keys, valid_to, valid_from, is_current, row_hash)
     expire_deleted(df_updates, delta_target, primary_keys, date_key, is_current, valid_to)
 
+    return df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+    
 def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key, valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
     max_date_key = df_source.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
     df_updates = df_source.filter(F.col(date_key) == F.lit(max_date_key))
@@ -357,6 +359,8 @@ def full_refresh_scd2(source_path, target_path, schema):
 
     overwrite_target(df_updates, target_path)
 
+    return df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+
 def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key):
     df = df.withColumn(row_hash, F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256))
 
@@ -378,12 +382,16 @@ def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, va
             F.lead(valid_from).over(group_window2)
         ).otherwise(F.lit("9999-12-31").cast("date"))
     )
-    df = df.withColumn(is_current, F.when(F.col(valid_to).isNull(), F.lit(True)).otherwise(F.lit(False)))
+         df.withColumn(
+   is_current, en(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True))
+   erwise(F.lit(False))
+)
 
-    window = Window.orderBy(*primary_keys)
-    df = df.withColumn(surrogate_key, F.row_number().over(window))
+  
+    ow = Window.orderBy(*primary_keys)
+         df.withColumn(surrogate_key, F.row_number().over(window))
 
-    df = df.drop('prev_row_hash', 'hash_change', 'group_id')
+         df.drop('prev_row_hash', 'hash_change', 'group_id')
 
     return df
 
@@ -410,10 +418,21 @@ if not spark.catalog.tableExists(catalog_path):
     full_refresh = True
 
 if full_refresh:
-    full_refresh_scd2(source_path, target_path, schema)
+    max_date_key = full_refresh_scd2(source_path, target_path, schema)
 else:
-    incremental_scd2(source_path, target_path, schema, min_date_key)
+    max_date_key = incremental_scd2(source_path, target_path, schema, min_date_key)
 
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+mssparkutils.notebook.exit(max_date_key)
 
 # METADATA ********************
 

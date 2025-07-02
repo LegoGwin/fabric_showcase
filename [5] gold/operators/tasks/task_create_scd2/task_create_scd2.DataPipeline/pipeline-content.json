@@ -35,7 +35,7 @@
               },
               "type": "string"
             },
-            "min_partition": {
+            "min_date_key": {
               "value": {
                 "value": "@coalesce(\n    pipeline().parameters.min_date_key,\n    if(\n        empty(activity('lookup_meta_data_dynamic').output.value),\n        null,\n        activity('lookup_meta_data_dynamic').output.value[0].min_date_key\n    )\n)",
                 "type": "Expression"
@@ -232,7 +232,7 @@
               },
               "type": "String"
             },
-            "min_partition": {
+            "min_date_key": {
               "value": {
                 "value": "@activity('task').output.result.exitValue",
                 "type": "Expression"
