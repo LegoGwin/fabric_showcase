@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "task_to_warehouse"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "8aec346f-6179-8199-4ddc-d58a48edbb79"
+  }
+}

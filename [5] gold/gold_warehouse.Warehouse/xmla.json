@@ -381,7 +381,7 @@
         "annotations": [
           {
             "name": "IsTableInBiModel",
-            "value": "False"
+            "value": "True"
           }
         ]
       }
