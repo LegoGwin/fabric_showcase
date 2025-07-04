@@ -1,0 +1,283 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "Copy",
+        "typeProperties": {
+          "source": {
+            "type": "LakehouseTableSource",
+            "datasetSettings": {
+              "type": "LakehouseTable",
+              "typeProperties": {
+                "schema": {
+                  "value": "@variables('source_schema')",
+                  "type": "Expression"
+                },
+                "table": {
+                  "value": "@variables('source_table')",
+                  "type": "Expression"
+                }
+              },
+              "schema": [],
+              "linkedService": {
+                "name": "gold_lakehouse",
+                "properties": {
+                  "type": "Lakehouse",
+                  "typeProperties": {
+                    "artifactId": "96d3db9d-aa33-b773-461e-8db631d88d62",
+                    "workspaceId": "00000000-0000-0000-0000-000000000000",
+                    "rootFolder": "Tables"
+                  },
+                  "annotations": []
+                }
+              },
+              "annotations": []
+            }
+          },
+          "sink": {
+            "type": "DataWarehouseSink",
+            "tableOption": "autoCreate",
+            "allowCopyCommand": true,
+            "copyCommandSettings": {},
+            "datasetSettings": {
+              "type": "DataWarehouseTable",
+              "typeProperties": {
+                "schema": {
+                  "value": "@variables('target_schema')",
+                  "type": "Expression"
+                },
+                "table": {
+                  "value": "@variables('target_table')",
+                  "type": "Expression"
+                }
+              },
+              "schema": [],
+              "linkedService": {
+                "name": "gold_warehouse",
+                "properties": {
+                  "type": "DataWarehouse",
+                  "typeProperties": {
+                    "artifactId": "fe581131-8f47-481c-82b1-b60beef6be7c",
+                    "endpoint": "64k76qoso54upbqqkmfdnabrny-ndyrahpalz7urp5ujpd6t7nwvm.datawarehouse.fabric.microsoft.com",
+                    "workspaceId": "1d10f168-5ee0-487f-bfb4-4bc7e9fdb6ab"
+                  },
+                  "annotations": []
+                }
+              },
+              "annotations": []
+            }
+          },
+          "translator": {
+            "type": "TabularTranslator",
+            "typeConversion": true,
+            "typeConversionSettings": {
+              "allowDataTruncation": true,
+              "treatBooleanAsNumber": false
+            }
+          },
+          "enableStaging": true
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "task",
+        "dependsOn": [
+          {
+            "activity": "set_target_schema",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "set_target_table",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "set_source_schema",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "set_source_table",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Lookup",
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderStoredProcedureName": "[dbo].[get_task_to_warehouse]",
+            "storedProcedureParameters": {
+              "task_id": {
+                "value": {
+                  "value": "@pipeline().parameters.task_id",
+                  "type": "Expression"
+                },
+                "type": "String"
+              }
+            },
+            "partitionOption": "None",
+            "queryTimeout": "02:00:00"
+          },
+          "datasetSettings": {
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "connectionSettings": {
+              "name": "meta_data",
+              "properties": {
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "artifactId": "9d2f8001-d815-9d78-4d76-6f10d6cac2ad",
+                  "workspaceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "externalReferences": {
+                  "connection": "5ce2552f-bda6-4456-8df2-5b8dc7c3fb77"
+                },
+                "annotations": []
+              }
+            },
+            "annotations": []
+          },
+          "firstRowOnly": false
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "lookup_meta_data",
+        "dependsOn": []
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "target_schema",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.target_path,\n        activity('lookup_meta_data').output.value[0].target_path\n        ),\n    '/'\n)[2]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_target_schema",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "target_table",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.target_path,\n        activity('lookup_meta_data').output.value[0].target_path\n        ),\n    '/'\n)[3]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_target_table",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "source_schema",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.source_path,\n        activity('lookup_meta_data').output.value[0].source_path\n        ),\n    '/'\n)[3]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_source_schema",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "source_table",
+          "value": {
+            "value": "@split(\n    coalesce(\n        pipeline().parameters.source_path,\n        activity('lookup_meta_data').output.value[0].source_path\n        ),\n    '/'\n)[4]",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "set_source_table",
+        "dependsOn": [
+          {
+            "activity": "lookup_meta_data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      }
+    ],
+    "parameters": {
+      "task_id": {
+        "type": "string"
+      },
+      "target_path": {
+        "type": "string"
+      },
+      "source_path": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "target_schema": {
+        "type": "String"
+      },
+      "target_table": {
+        "type": "String"
+      },
+      "source_schema": {
+        "type": "String"
+      },
+      "source_table": {
+        "type": "String"
+      }
+    }
+  }
+}
