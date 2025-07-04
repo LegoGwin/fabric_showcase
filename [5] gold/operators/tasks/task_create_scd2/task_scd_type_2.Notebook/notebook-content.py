@@ -382,16 +382,16 @@ def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, va
             F.lead(valid_from).over(group_window2)
         ).otherwise(F.lit("9999-12-31").cast("date"))
     )
-         df.withColumn(
-   is_current, en(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True))
-   erwise(F.lit(False))
-)
+    df.withColumn(
+        is_current, en(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True))
+        erwise(F.lit(False))
+        )
 
   
     ow = Window.orderBy(*primary_keys)
-         df.withColumn(surrogate_key, F.row_number().over(window))
+    df.withColumn(surrogate_key, F.row_number().over(window))
 
-         df.drop('prev_row_hash', 'hash_change', 'group_id')
+    df.drop('prev_row_hash', 'hash_change', 'group_id')
 
     return df
 
