@@ -148,7 +148,7 @@ This solution enables metadata-driven orchestration of pipelines within a Micros
    - `bronze` stores raw staged data (often file-based)
    - `silver` holds cleaned, enriched, and conformed data (e.g., pre-SCD2 outputs)
    - `gold` contains final analytical tables like facts and dimensions
-"""
+
 
 ## 📘 History
 
