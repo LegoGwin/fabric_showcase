@@ -150,7 +150,7 @@ This solution enables metadata-driven orchestration of pipelines within a Micros
    - `gold` contains final analytical tables like facts and dimensions
 """
 
-## 🛠️ History
+## 📘 History
 
 A prior version of this framework was successfully deployed in a client engagement, where it served as the backbone for a Fabric-based medallion architecture. While this repository represents a generalized and cleaned-up version of that implementation, the core concepts — including metadata-driven ingestion, modular transformations, and dynamic SCD2 handling — were proven in a production environment.
 
