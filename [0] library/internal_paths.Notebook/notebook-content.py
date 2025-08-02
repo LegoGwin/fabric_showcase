@@ -189,7 +189,9 @@ def get_internal_path(path_format, logical_path):
     split_path = split_logical_path(logical_path)
     path_type = split_path['path_type']
 
-    if path_type == 'lakefiles' or path_type == 'deltalake':
+    if path_type == 'lakefiles':
+        result = get_lakehouse_path(path_format, logical_path)
+    elif path_type == 'deltalake':
         result = get_lakehouse_path(path_format, logical_path)
     elif path_type == 'warehouse':
         result = get_warehouse_path(path_format, logical_path)

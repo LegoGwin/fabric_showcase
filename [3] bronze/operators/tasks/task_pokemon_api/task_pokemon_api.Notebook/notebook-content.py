@@ -31,21 +31,12 @@
 # META   "language_group": "synapse_pyspark"
 # META }
 
-# CELL ********************
-
-%run bronze_manager
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
 # PARAMETERS CELL ********************
 
 target_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
 resource = 'berry'
+partition_name = 'Partition'
+partition_format = 'yyyyMMddHHmmss'
 
 # METADATA ********************
 
@@ -67,7 +58,23 @@ json_list = extract_pokemon_api(resource)
 
 # CELL ********************
 
-text_list_to_files(json_list, target_path)
+def text_list_to_files(text_list, logical_path, partition_name, partition_format):
+    df = spark.createDataFrame(text_list, StringType())
+    df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
+
+    output_path = get_lakehouse_path('relative', logical_path)
+    df.write.mode('append').partitionBy(partition_name).text(output_path)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+text_list_to_files(json_list, target_path, partition_name, partition_format)
 
 # METADATA ********************
 
