@@ -22,6 +22,29 @@
 
 # CELL ********************
 
+from pyspark.sql.types import StringType
+from pyspark.sql.functions import current_timestamp, date_format
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+%run internal_paths
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
 %run extract_pokemon_api
 
 # METADATA ********************
@@ -47,7 +70,7 @@ partition_format = 'yyyyMMddHHmmss'
 
 # CELL ********************
 
-json_list = extract_pokemon_api(resource)
+text_list = extract_pokemon_api(resource)
 
 # METADATA ********************
 
@@ -74,7 +97,7 @@ def text_list_to_files(text_list, logical_path, partition_name, partition_format
 
 # CELL ********************
 
-text_list_to_files(json_list, target_path, partition_name, partition_format)
+text_list_to_files(text_list, target_path, partition_name, partition_format)
 
 # METADATA ********************
 
