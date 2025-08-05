@@ -22,9 +22,8 @@
 
 # CELL ********************
 
-from pyspark.sql.functions import current_timestamp, date_format, col, lit, posexplode_outer, to_json, max as sql_max, col
+from pyspark.sql.functions import col, to_json, max as sql_max
 from pyspark.sql.types import StringType, ArrayType, StructType, MapType
-from pyspark.sql.functions import max as sql_max, col
 import re
 import json
 
