@@ -85,7 +85,7 @@ def text_list_to_files(text_list, logical_path, partition_name, partition_format
     df = spark.createDataFrame(text_list, StringType())
     df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
 
-    output_path = get_lakehouse_path('relative', logical_path)
+    output_path = get_internal_path('abfss', logical_path)
     df.write.mode('append').partitionBy(partition_name).text(output_path)
 
 # METADATA ********************

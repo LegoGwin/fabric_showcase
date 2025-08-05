@@ -37,6 +37,10 @@
           "sink": {
             "type": "DataWarehouseSink",
             "tableOption": "autoCreate",
+            "preCopyScript": {
+              "value": "@concat('delete from ',\n    variables('target_schema'), '.', variables('target_table'))\n",
+              "type": "Expression"
+            },
             "allowCopyCommand": true,
             "copyCommandSettings": {},
             "datasetSettings": {

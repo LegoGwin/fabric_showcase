@@ -48,50 +48,6 @@ from operator import and_
 # META   "language_group": "synapse_pyspark"
 # META }
 
-# CELL ********************
-
-%run bronze_manager
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-%run silver_reader
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-%run silver_transformer
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-%run silver_writer
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
 # PARAMETERS CELL ********************
 
 target_path = "deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry"
@@ -100,6 +56,7 @@ write_method = 'overwrite'
 partition_update = 'True'
 full_refresh = 'False'
 schema = None
+partition_name = 'Partition'
 min_partition = '20250512105513'
 
 # METADATA ********************
@@ -427,7 +384,21 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 
 # CELL ********************
 
-mssparkutils.notebook.exit(get_max_partition(df_source))
+def get_max_partition(df, partition_name):
+    result = df.select(sql_max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
+    
+    return result
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+mssparkutils.notebook.exit(get_max_partition(df_source, partition_name))
 
 # METADATA ********************
 

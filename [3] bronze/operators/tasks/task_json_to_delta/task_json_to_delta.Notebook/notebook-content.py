@@ -22,11 +22,21 @@
 
 # CELL ********************
 
-from pyspark.sql.functions import current_timestamp, date_format, col, lit, posexplode_outer, to_json, max as sql_max, col
-from pyspark.sql.types import StringType, ArrayType, StructType, MapType
-from pyspark.sql.functions import max as sql_max, col
+from pyspark.sql.functions import col, posexplode_outer, to_json, max as sql_max
+from pyspark.sql.types import ArrayType, StructType, MapType
 import re
 import json
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+%run internal_paths
 
 # METADATA ********************
 
@@ -43,7 +53,7 @@ flatten_mode = 'recursive'
 flatten_settings = '[]'
 multi_line = 'false'
 partition_name = 'Partition'
-min_partition = '20250512141514'
+min_partition = '20250805131146'
 
 # METADATA ********************
 
