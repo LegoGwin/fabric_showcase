@@ -20,6 +20,20 @@
                 "type": "Expression"
               },
               "type": "string"
+            },
+            "partition_name": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.partition_name,\n    activity('lookup_meta_data').output.value[0].partition_name\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "partition_format": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.partition_format,\n    activity('lookup_meta_data').output.value[0].partition_format\n)",
+                "type": "Expression"
+              },
+              "type": "string"
             }
           }
         },
@@ -98,6 +112,12 @@
         "type": "string"
       },
       "resource": {
+        "type": "string"
+      },
+      "partition_name": {
+        "type": "string"
+      },
+      "partition_format": {
         "type": "string"
       }
     }

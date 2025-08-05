@@ -84,6 +84,20 @@
               },
               "type": "string"
             },
+            "multi_line": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.multi_line,\n    activity('lookup_meta_data').output.value[0].multi_line\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "partition_name": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.partition_name,\n    activity('lookup_meta_data').output.value[0].partition_name\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
             "min_partition": {
               "value": {
                 "value": "@coalesce(\n    pipeline().parameters.min_partition,\n    if(\n        empty(activity('lookup_meta_data_dynamic').output.value),\n        null,\n        activity('lookup_meta_data_dynamic').output.value[0].min_partition\n    )\n)",
@@ -287,6 +301,12 @@
         "type": "string"
       },
       "flatten_settings": {
+        "type": "string"
+      },
+      "multi_line": {
+        "type": "string"
+      },
+      "partition_name": {
         "type": "string"
       },
       "min_partition": {
