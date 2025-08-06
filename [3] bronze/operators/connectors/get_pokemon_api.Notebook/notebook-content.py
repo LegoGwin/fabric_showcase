@@ -64,6 +64,7 @@ def get_resource_urls(resource):
         items_url = resp_json['next']
         urls.extend(item['url'] for item in resp_json['results'])
 
+    print(urls)
     return urls
 
 # METADATA ********************
