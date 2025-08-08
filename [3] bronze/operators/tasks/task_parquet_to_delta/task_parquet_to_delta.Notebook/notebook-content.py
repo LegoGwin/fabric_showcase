@@ -123,7 +123,7 @@ df = format_columns(df)
 
 # CELL ********************
 
-def dataframe_to_table(df, logical_path):
+def dataframe_to_table(df, logical_path, partition_name):
     api_path = get_lakehouse_path('api', logical_path)
     relative_path = get_lakehouse_path('relative', logical_path)
 
@@ -158,7 +158,7 @@ def dataframe_to_table(df, logical_path):
 
 # CELL ********************
 
-dataframe_to_table(df, target_path)
+dataframe_to_table(df, target_path, partition_name)
 
 # METADATA ********************
 
@@ -169,7 +169,7 @@ dataframe_to_table(df, target_path)
 
 # CELL ********************
 
-def get_max_partition(df):
+def get_max_partition(df, partition_name):
     result = df.select(sql_max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
     
     return result

@@ -53,7 +53,7 @@ flatten_mode = 'recursive'
 flatten_settings = '[]'
 multi_line = 'false'
 partition_name = 'Partition'
-min_partition = '20250805131146'
+min_partition = '20250805134337'
 
 # METADATA ********************
 
@@ -234,7 +234,7 @@ dataframe_to_table(df, target_path, partition_name)
 
 # CELL ********************
 
-def get_max_partition(df):
+def get_max_partition(df, partition_name):
     result = df.select(sql_max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
     
     return result
