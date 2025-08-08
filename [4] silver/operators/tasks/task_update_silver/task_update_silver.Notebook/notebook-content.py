@@ -51,7 +51,7 @@ from operator import and_
 # PARAMETERS CELL ********************
 
 target_path = "deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry"
-source_path = ''
+source_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 write_method = 'overwrite'
 partition_update = 'True'
 full_refresh = 'False'
