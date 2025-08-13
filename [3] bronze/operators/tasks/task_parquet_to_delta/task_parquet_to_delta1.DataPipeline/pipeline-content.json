@@ -70,9 +70,23 @@
               },
               "type": "string"
             },
+            "partition_name": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.partition_name,\n    activity('lookup_meta_data').output.value[0].partition_name\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
             "min_partition": {
               "value": {
                 "value": "@coalesce(\n    pipeline().parameters.min_partition,\n    if(\n        empty(activity('lookup_meta_data_dynamic').output.value),\n        null,\n        activity('lookup_meta_data_dynamic').output.value[0].min_partition\n    )\n)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "full_refresh": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.full_refresh,\n    activity('lookup_meta_data').output.value[0].full_refresh\n)",
                 "type": "Expression"
               },
               "type": "string"
@@ -214,7 +228,13 @@
       "source_path": {
         "type": "string"
       },
+      "partition_name": {
+        "type": "string"
+      },
       "min_partition": {
+        "type": "string"
+      },
+      "full_refresh": {
         "type": "string"
       }
     }

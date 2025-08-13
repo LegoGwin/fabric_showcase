@@ -58,7 +58,7 @@ from pyspark.sql.functions import current_timestamp, date_format
 
 target_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
 resource = 'berry'
-partition_name = 'Partition'
+partition_name = 'partition'
 partition_format = 'yyyyMMddHHmmss'
 
 # METADATA ********************

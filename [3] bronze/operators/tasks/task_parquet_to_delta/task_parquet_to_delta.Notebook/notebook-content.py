@@ -22,10 +22,21 @@
 
 # CELL ********************
 
-from pyspark.sql.functions import col, to_json, max as sql_max
-from pyspark.sql.types import StringType, ArrayType, StructType, MapType
+from pyspark.sql.functions import col, max
+from pyspark.sql.types import ArrayType, StructType, MapType
 import re
 import json
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+%run internal_paths
 
 # METADATA ********************
 
@@ -38,8 +49,29 @@ import json
 
 target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
-partition_name = 'Partition'
+partition_name = 'partition'
 min_partition = '20250512141514'
+full_refresh = 'false'
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+full_refresh = full_refresh.strip().lower() == 'true'
+
+api_path = get_internal_path('api', target_path)
+if not spark.catalog.tableExists(api_path):
+    full_refresh = True
+elif min_partition is None:
+    full_refresh = True
+
+if full_refresh:
+    min_partition = None
 
 # METADATA ********************
 
@@ -51,11 +83,11 @@ min_partition = '20250512141514'
 # CELL ********************
 
 def read_parquet_files(logical_path, partition_name, min_partition):
-    path = get_internal_path('abfss', logical_path)
+    abfss_path = get_internal_path('abfss', logical_path)
 
     df = spark.read \
         .option('mergeSchema', 'true') \
-        .parquet(path)
+        .parquet(abfss_path)
 
     if min_partition:
         df = df.filter(f'{partition_name} >= {min_partition}')
@@ -93,11 +125,7 @@ def format_columns(df):
     for field in df.schema:
         column_name = field.name
         clean_name = clean_column_name(column_name)
-
-        if isinstance(field.dataType, (StructType, ArrayType, MapType)):
-            exprs.append(f"to_json(`{column_name}`) as `{clean_name}`")
-        else:
-            exprs.append(f"cast(`{column_name}` as string) as `{clean_name}`")
+        exprs.append(f"cast(`{column_name}` as string) as `{clean_name}`")
 
     df = df.selectExpr(*exprs)
 
@@ -123,12 +151,12 @@ df = format_columns(df)
 
 # CELL ********************
 
-def dataframe_to_table(df, logical_path, partition_name):
-    api_path = get_lakehouse_path('api', logical_path)
-    relative_path = get_lakehouse_path('relative', logical_path)
+def get_column_order(df, logical_path):
+    api_path = get_internal_path('api', logical_path)
+    abfss_path = get_internal_path('abfss', logical_path)
 
     if spark.catalog.tableExists(api_path):
-        target_schema = spark.read.format('delta').load(relative_path).schema
+        target_schema = spark.read.format('delta').load(abfss_path).schema
         target_columns = [f'`{field.name}`' for field in target_schema]
     else:
         target_columns = []
@@ -138,16 +166,30 @@ def dataframe_to_table(df, logical_path, partition_name):
 
     old_columns = [column for column in target_columns if column in source_columns]
     new_columns = [column for column in source_columns if column not in target_columns]
-    ordered_columns = old_columns + new_columns
+    column_order = old_columns + new_columns
 
-    df_reordered = df.select(*ordered_columns)
+    return column_order
+
+def dataframe_to_table(df, logical_path, partition_name, full_refresh):
+    abfss_path = get_internal_path('abfss', logical_path)
+
+    column_order = get_column_order(df, logical_path)
+    df = df.select(*column_order)
     
-    df_reordered.write \
-        .option('mergeSchema', 'true') \
-        .mode('append') \
-        .partitionBy(partition_name) \
-        .format('delta') \
-        .save(relative_path)
+    if full_refresh:
+        df.write \
+            .mode('overwrite') \
+            .option('overwriteSchema', 'true') \
+            .partitionBy(partition_name) \
+            .format('delta') \
+            .save(abfss_path)
+    else:
+        df.write \
+            .mode('append') \
+            .option('mergeSchema', 'true') \
+            .partitionBy(partition_name) \
+            .format('delta') \
+            .save(abfss_path)
 
 # METADATA ********************
 
@@ -158,7 +200,7 @@ def dataframe_to_table(df, logical_path, partition_name):
 
 # CELL ********************
 
-dataframe_to_table(df, target_path, partition_name)
+dataframe_to_table(df, target_path, partition_name, full_refresh)
 
 # METADATA ********************
 
@@ -170,7 +212,7 @@ dataframe_to_table(df, target_path, partition_name)
 # CELL ********************
 
 def get_max_partition(df, partition_name):
-    result = df.select(sql_max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
+    result = df.select(max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
     
     return result
 

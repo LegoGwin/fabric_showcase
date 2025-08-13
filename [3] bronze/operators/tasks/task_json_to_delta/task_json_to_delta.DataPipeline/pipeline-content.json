@@ -104,6 +104,13 @@
                 "type": "Expression"
               },
               "type": "string"
+            },
+            "full_refresh": {
+              "value": {
+                "value": "@coalesce(\n    pipeline().parameters.full_refresh,\n    activity('lookup_meta_data').output.value[0].full_refresh\n)",
+                "type": "Expression"
+              },
+              "type": "string"
             }
           }
         },
@@ -310,6 +317,9 @@
         "type": "string"
       },
       "min_partition": {
+        "type": "string"
+      },
+      "full_refresh": {
         "type": "string"
       }
     }

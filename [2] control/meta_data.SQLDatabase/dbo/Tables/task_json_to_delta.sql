@@ -4,7 +4,8 @@ CREATE TABLE [dbo].[task_json_to_delta] (
     [source_path]    VARCHAR (256) NULL,
     [flatten_mode]   VARCHAR (256) NULL,
     [multi_line]     VARCHAR (8)   NULL,
-    [partition_name] VARCHAR (64)  NULL
+    [partition_name] VARCHAR (64)  NULL,
+    [full_refresh]   VARCHAR (8)   NULL
 );
 
 
