@@ -54,10 +54,31 @@ target_path = "deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry"
 source_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 write_method = 'overwrite'
 partition_update = 'True'
-full_refresh = 'False'
-schema = None
-partition_name = 'Partition'
+schema = """
+    [
+        {"expression":"id","column_type":"int","column_name":"Id","column_order":1,"is_filter":0,"is_primary_key":1,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"name","column_type":"string","column_name":"Name","column_order":2,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"growth_time","column_type":"int","column_name":"GrowthTime","column_order":3,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"max_harvest","column_type":"int","column_name":"MaxHarvest","column_order":4,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"natural_gift_power","column_type":"int","column_name":"NaturalGiftPower","column_order":5,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"size","column_type":"int","column_name":"Size","column_order":6,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"smoothness","column_type":"int","column_name":"Smoothness","column_order":7,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"soil_dryness","column_type":"int","column_name":"SoilDyrness","column_order":8,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"firmness_name","column_type":"string","column_name":"FirmnessName","column_order":9,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"firmness_url","column_type":"string","column_name":"FirmnessUrl","column_order":10,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"item_name","column_type":"string","column_name":"ItemName","column_order":11,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"item_url","column_type":"string","column_name":"ItemUrl","column_order":12,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"natural_gift_type_name","column_type":"string","column_name":"NaturalGiftTypeName","column_order":13,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"natural_gift_type_url","column_type":"string","column_name":"NaturalGiftTypeUrl","column_order":14,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"flavors_potency","column_type":"int","column_name":"FlavorPotency","column_order":15,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"flavors_flavor_name","column_type":"string","column_name":"FlavorName","column_order":16,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"flavors_flavor_url","column_type":"string","column_name":"FlavorUrl","column_order":17,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"partition","column_type":"string","column_name":"Partition","column_order":18,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":1,"is_output":1,"is_partition_by":0}
+    ]
+    """
+partition_name = 'partition'
 min_partition = '20250512105513'
+full_refresh = 'False'
 
 # METADATA ********************
 
