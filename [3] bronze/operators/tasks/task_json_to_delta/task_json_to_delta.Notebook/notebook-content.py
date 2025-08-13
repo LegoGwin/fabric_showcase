@@ -52,7 +52,7 @@ source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
 flatten_mode = 'recursive'
 flatten_settings = '[]'
 multi_line = 'false'
-partition_name = 'Partition'
+partition_name = 'partition'
 min_partition = '20250805134337'
 full_refresh = 'false'
 

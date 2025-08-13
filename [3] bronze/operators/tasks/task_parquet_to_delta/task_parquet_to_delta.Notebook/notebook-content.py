@@ -23,7 +23,6 @@
 # CELL ********************
 
 from pyspark.sql.functions import col, max
-from pyspark.sql.types import ArrayType, StructType, MapType
 import re
 import json
 
