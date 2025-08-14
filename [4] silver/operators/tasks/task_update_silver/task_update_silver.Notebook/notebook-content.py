@@ -78,7 +78,7 @@ schema = """
     """
 partition_name = 'partition'
 min_partition = '20250512105513'
-full_refresh = 'False'
+full_refresh = 'false'
 
 # METADATA ********************
 
@@ -111,7 +111,7 @@ if full_refresh:
 
 # CELL ********************
 
-def read_bronze_table(logical_path, min_partition = None):
+def read_bronze_table(logical_path, partition_name, min_partition = None):
     source_path = get_internal_path('abfss', logical_path)
     df = spark.read.format('delta').load(source_path)
 
@@ -129,7 +129,7 @@ def read_bronze_table(logical_path, min_partition = None):
 
 # CELL ********************
 
-df_source = read_bronze_table(source_path, min_partition)
+df_source = read_bronze_table(source_path, partition_name, min_partition)
 
 # METADATA ********************
 

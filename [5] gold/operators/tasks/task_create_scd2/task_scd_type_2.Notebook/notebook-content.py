@@ -48,112 +48,22 @@ from delta.tables import DeltaTable
 
 # PARAMETERS CELL ********************
 
-target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry4'
+target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry5'
 source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry_history'
 full_refresh = 'false'
 
 schema = """
-        [
-            {
-                "column_name": "Id",
-                "is_primary_key": 1,
-                "is_business_key": 0,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "Name",
-                "is_primary_key": 0,
-                "is_business_key": 1,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "Partition",
-                "is_primary_key": 0,
-                "is_business_key": 1,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "ExtractDate",
-                "is_primary_key": 0,
-                "is_business_key": 0,
-                "is_date_key": 1,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "ValidFrom",
-                "is_primary_key": 0,
-                "is_business_key": 0,
-                "is_date_key": 0,
-                "is_valid_from": 1,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "ValidTo",
-                "is_primary_key": 0,
-                "is_business_key": 0,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 1,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "IsCurrent",
-                "is_primary_key": 0,
-                "is_business_key": 0,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 1,
-                "is_row_hash": 0,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "RowHash",
-                "is_primary_key": 0,
-                "is_business_key": 0,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 1,
-                "is_surrogate_key": 0
-            },
-            {
-                "column_name": "SurrogateKey",
-                "is_primary_key": 0,
-                "is_business_key": 0,
-                "is_date_key": 0,
-                "is_valid_from": 0,
-                "is_valid_to": 0,
-                "is_is_current": 0,
-                "is_row_hash": 0,
-                "is_surrogate_key": 1
-            }
-        ]
+    [
+        {"column_name":"Id","is_primary_key":1,"is_business_key":0,"is_date_key":0,"is_valid_from":0,"is_valid_to":0,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"Name","is_primary_key":0,"is_business_key":1,"is_date_key":0,"is_valid_from":0,"is_valid_to":0,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"Partition","is_primary_key":0,"is_business_key":1,"is_date_key":0,"is_valid_from":0,"is_valid_to":0,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"ExtractDate","is_primary_key":0,"is_business_key":0,"is_date_key":1,"is_valid_from":0,"is_valid_to":0,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"ValidFrom","is_primary_key":0,"is_business_key":0,"is_date_key":0,"is_valid_from":1,"is_valid_to":0,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"ValidTo","is_primary_key":0,"is_business_key":0,"is_date_key":0,"is_valid_from":0,"is_valid_to":1,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"IsCurrent","is_primary_key":0,"is_business_key":0,"is_date_key":0,"is_valid_from":0,"is_valid_to":0,"is_is_current":1,"is_row_hash":0,"is_surrogate_key":0},
+        {"column_name":"RowHash","is_primary_key":0,"is_business_key":0,"is_date_key":0,"is_valid_from":0,"is_valid_to":0,"is_is_current":0,"is_row_hash":1,"is_surrogate_key":0},
+        {"column_name":"SurrogateKey","is_primary_key":0,"is_business_key":0,"is_date_key":0,"is_valid_from":0,"is_valid_to":0,"is_is_current":0,"is_row_hash":0,"is_surrogate_key":1}
+    ]
     """
 
 min_date_key = None
@@ -227,8 +137,8 @@ def get_schema_fields(schema):
 # CELL ********************
 
 def read_silver_scd2(logical_path, date_key = None, min_date_key = None):
-    abfs_path = get_internal_path('abfs', logical_path)
-    df = spark.read.format('delta').load(abfs_path)
+    abfss_path = get_internal_path('abfss', logical_path)
+    df = spark.read.format('delta').load(abfss_path)
 
     if date_key and min_date_key:
         df = df.filter(col(date_key) >= min_date_key)
@@ -383,13 +293,13 @@ def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, va
         ).otherwise(F.lit("9999-12-31").cast("date"))
     )
     df.withColumn(
-        is_current, en(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True)).otherwise(F.lit(False))
+        is_current, F.when(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True)).otherwise(F.lit(False))
         )
   
-    ow = Window.orderBy(*primary_keys)
+    window = Window.orderBy(*primary_keys)
     df.withColumn(surrogate_key, F.row_number().over(window))
 
-    df.drop('prev_row_hash', 'hash_change', 'group_id')
+    df = df.drop('prev_row_hash', 'hash_change', 'group_id')
 
     return df
 
