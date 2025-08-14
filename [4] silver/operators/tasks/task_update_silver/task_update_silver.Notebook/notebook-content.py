@@ -112,8 +112,8 @@ if full_refresh:
 # CELL ********************
 
 def read_bronze_table(logical_path, partition_name, min_partition = None):
-    source_path = get_internal_path('abfss', logical_path)
-    df = spark.read.format('delta').load(source_path)
+    abfss_path = get_internal_path('abfss', logical_path)
+    df = spark.read.format('delta').load(abfss_path)
 
     if min_partition:
         df = df.filter(col(partition_name) >= min_partition)
