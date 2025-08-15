@@ -146,8 +146,8 @@ def read_silver_scd2(logical_path, date_key = None, min_date_key = None):
     return df
 
 def read_gold_scd2(logical_path):
-    abfs_path = get_internal_path('abfs', logical_path)
-    delta = DeltaTable.forPath(spark, abfs_path)
+    abfss_path = get_internal_path('abfss', logical_path)
+    delta = DeltaTable.forPath(spark, abfss_path)
 
     return delta
 
@@ -292,12 +292,12 @@ def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, va
             F.lead(valid_from).over(group_window2)
         ).otherwise(F.lit("9999-12-31").cast("date"))
     )
-    df.withColumn(
+    df = df.withColumn(
         is_current, F.when(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True)).otherwise(F.lit(False))
         )
   
     window = Window.orderBy(*primary_keys)
-    df.withColumn(surrogate_key, F.row_number().over(window))
+    df = df.withColumn(surrogate_key, F.row_number().over(window))
 
     df = df.drop('prev_row_hash', 'hash_change', 'group_id')
 
