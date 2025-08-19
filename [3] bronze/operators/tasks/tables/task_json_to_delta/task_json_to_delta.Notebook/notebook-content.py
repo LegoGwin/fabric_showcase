@@ -47,8 +47,8 @@ import json
 
 # PARAMETERS CELL ********************
 
-target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
-source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
+target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/item'
+source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/item'
 flatten_mode = 'recursive'
 flatten_settings = '[]'
 multi_line = 'false'

@@ -56,8 +56,8 @@ from pyspark.sql.functions import current_timestamp, date_format
 
 # PARAMETERS CELL ********************
 
-target_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
-resource = 'berry'
+target_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/pokemon'
+resource = 'pokemon'
 partition_name = 'partition'
 partition_format = 'yyyyMMddHHmmss'
 
