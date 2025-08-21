@@ -154,7 +154,7 @@ def get_magic_expr(expression):
     if function == 'datetime1':
         result = f"to_timestamp(`{source_name}`, 'yyyy-MM-dd HH:mm:ss')"
     elif function == "datetime2":
-        result = f"from_utc_timestamp(to_timestamp(`{source_name}`, 'yyyy-MM-dd HH:mm:ss'), America/New_York')"
+        result = f"from_utc_timestamp(to_timestamp(`{source_name}`, 'yyyy-MM-dd HH:mm:ss'), 'America/New_York')"
     elif function == "datetime3":
         result = f"to_timestamp(regexp_replace(left(`{source_name}`, 19), 'T', ' '), 'yyyy-MM-dd HH:mm:ss')"
     else:
