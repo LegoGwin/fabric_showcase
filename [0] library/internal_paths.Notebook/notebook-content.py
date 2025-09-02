@@ -199,7 +199,7 @@ def get_internal_path(path_format, logical_path):
         result = get_database_path(path_format, logical_path)
     elif path_type == 'eventhouse':
         result = get_eventhouse_path(path_format, logical_path)
-    else: 
+    else:
         result = None
 
     return result
