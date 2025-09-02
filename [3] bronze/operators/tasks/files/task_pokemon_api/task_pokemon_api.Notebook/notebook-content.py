@@ -105,3 +105,15 @@ text_list_to_files(text_list, target_path, partition_name, partition_format)
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark"
 # META }
+
+# CELL ********************
+
+def main():
+    pass
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
