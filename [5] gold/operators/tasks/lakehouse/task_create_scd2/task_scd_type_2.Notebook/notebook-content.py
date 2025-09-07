@@ -42,7 +42,7 @@ from delta.tables import DeltaTable
 
 # PARAMETERS CELL ********************
 
-target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry6'
+target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimPokemonBerry'
 source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry_history'
 full_refresh = 'false'
 
