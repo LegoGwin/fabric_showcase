@@ -8,24 +8,19 @@
 # META   },
 # META   "dependencies": {
 # META     "lakehouse": {
-# META       "default_lakehouse": "20afa95c-f7fc-45a4-b213-a47c9a2a6c5c",
-# META       "default_lakehouse_name": "bronze_lakehouse",
-# META       "default_lakehouse_workspace_id": "1d10f168-5ee0-487f-bfb4-4bc7e9fdb6ab",
-# META       "known_lakehouses": [
-# META         {
-# META           "id": "20afa95c-f7fc-45a4-b213-a47c9a2a6c5c"
-# META         }
-# META       ]
+# META       "default_lakehouse_name": "",
+# META       "default_lakehouse_workspace_id": ""
 # META     }
 # META   }
 # META }
 
 # CELL ********************
 
-from pyspark.sql.functions import col, posexplode_outer, max
-from pyspark.sql.types import ArrayType, StructType, MapType
 import re
 import json
+from pyspark.sql.functions import col, posexplode_outer, max
+from pyspark.sql.types import ArrayType, StructType, MapType
+from delta.tables import DeltaTable
 
 # METADATA ********************
 
@@ -47,8 +42,8 @@ import json
 
 # PARAMETERS CELL ********************
 
-target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/item'
-source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/item'
+target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
+source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
 flatten_mode = 'recursive'
 flatten_settings = '[]'
 multi_line = 'false'
@@ -67,8 +62,8 @@ full_refresh = 'false'
 
 full_refresh = full_refresh.strip().lower() == 'true'
 
-api_path = get_internal_path('api', target_path)
-if not spark.catalog.tableExists(api_path):
+abfss_path = get_internal_path('abfss', target_path)
+if not DeltaTable.isDeltaTable(spark, abfss_path):
     full_refresh = True
 elif min_partition is None:
     full_refresh = True
@@ -206,10 +201,9 @@ df = transform_json(df, flatten_mode, flatten_settings)
 # CELL ********************
 
 def get_column_order(df, logical_path):
-    api_path = get_internal_path('api', logical_path)
     abfss_path = get_internal_path('abfss', logical_path)
 
-    if spark.catalog.tableExists(api_path):
+    if DeltaTable.isDeltaTable(spark, abfss_path):
         target_schema = spark.read.format('delta').load(abfss_path).schema
         target_columns = [f'`{field.name}`' for field in target_schema]
     else:

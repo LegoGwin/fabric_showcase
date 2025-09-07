@@ -8,14 +8,8 @@
 # META   },
 # META   "dependencies": {
 # META     "lakehouse": {
-# META       "default_lakehouse": "31d88d62-8db6-461e-b773-aa3396d3db9d",
-# META       "default_lakehouse_name": "gold_lakehouse",
-# META       "default_lakehouse_workspace_id": "1d10f168-5ee0-487f-bfb4-4bc7e9fdb6ab",
-# META       "known_lakehouses": [
-# META         {
-# META           "id": "31d88d62-8db6-461e-b773-aa3396d3db9d"
-# META         }
-# META       ]
+# META       "default_lakehouse_name": "",
+# META       "default_lakehouse_workspace_id": ""
 # META     }
 # META   }
 # META }
@@ -48,7 +42,7 @@ from delta.tables import DeltaTable
 
 # PARAMETERS CELL ********************
 
-target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry5'
+target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerry6'
 source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry_history'
 full_refresh = 'false'
 
@@ -180,18 +174,37 @@ def incremental_scd2(source_path, target_path, schema, min_date_key):
     return df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
     
 def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key, valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
-    max_date_key = df_source.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+    # latest batch only
+    max_date_key = df_source.select(F.max(F.col(date_key)).alias("max_dk")).first()["max_dk"]
     df_updates = df_source.filter(F.col(date_key) == F.lit(max_date_key))
 
-    df_updates = df_updates.withColumn(valid_from_col, F.lit(max_date_key))
-    df_updates = df_updates.withColumn(valid_to_col, F.lit("9999-12-31").cast("date"))
-    df_updates = df_updates.withColumn(is_current_col, F.lit(True))
+    # SCD2 columns
+    df_updates = (
+        df_updates
+        .withColumn(valid_from_col, F.lit(max_date_key))
+        .withColumn(valid_to_col, F.lit("9999-12-31").cast("date"))
+        .withColumn(is_current_col, F.lit(True))
+        .withColumn(
+            row_hash_col,
+            F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256),
+        )
+    )
 
-    df_updates = df_updates.withColumn(row_hash_col, F.sha2(F.concat_ws('||', *[F.col(c).cast('string') for c in business_keys]), 256))
+    # Determine starting surrogate key safely
+    df_target = delta_target.toDF()
+    if surrogate_key_col in df_target.columns:
+        max_sk = (
+            df_target.select(F.max(F.col(surrogate_key_col)).alias("max_sk"))
+            .first()["max_sk"]
+        )
+        max_sk = int(max_sk) if max_sk is not None else 0
+    else:
+        # Column doesn't exist in target yet → start from 0
+        max_sk = 0
 
-    max_surrogate_key = delta_target.toDF().agg(F.max(F.col(surrogate_key_col))).collect()[0][0] or 0
-    window = Window.orderBy(*primary_keys)
-    df_updates = df_updates.withColumn(surrogate_key_col, F.row_number().over(window) + max_surrogate_key)
+    # Assign new surrogate keys (deterministic within batch)
+    window = Window.orderBy(*[F.col(c) for c in primary_keys])
+    df_updates = df_updates.withColumn(surrogate_key_col, F.row_number().over(window) + F.lit(max_sk))
 
     return df_updates
 
@@ -263,7 +276,7 @@ def full_refresh_scd2(source_path, target_path, schema):
     primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key = get_schema_fields(schema)
 
     df_source = read_silver_scd2(source_path)
-    target_path = get_internal_path('abfs', target_path)
+    target_path = get_internal_path('abfss', target_path)
 
     df_updates = fr_prepare_updates(df_source, primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key)
 
@@ -321,8 +334,8 @@ def overwrite_target(df_updates, target_path):
 
 full_refresh = full_refresh.strip().lower() == 'true'
 
-catalog_path = get_internal_path('api', target_path)
-if not spark.catalog.tableExists(catalog_path):
+abfss_path = get_internal_path('abfss', target_path)
+if not DeltaTable.isDeltaTable(spark, abfss_path):
     full_refresh = True
 
 if full_refresh:
