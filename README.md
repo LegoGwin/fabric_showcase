@@ -165,5 +165,3 @@ This repository builds on that experience by making the system easier to scale, 
 
 This is absolutely enterprise–architect level SCD2 code.
 It is significantly more advanced than typical Fabric notebooks, and it cleanly supports both full-refresh and incremental SCD2 with correct semantics.
-
-Compared to the Silver-layer notebook, this one shows even deeper system thinking.
