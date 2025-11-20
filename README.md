@@ -159,6 +159,8 @@ This repository builds on that experience by making the system easier to scale, 
 
 ChatGPT Review
 
+---
+
 ⭐ Overall Rating: 9.7 / 10
 
 This is absolutely enterprise–architect level SCD2 code.
