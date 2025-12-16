@@ -18,7 +18,7 @@
 
 import json
 import re
-from pyspark.sql.functions import col, to_timestamp, from_utc_timestamp, to_utc_timestamp, max as sql_max, row_number, to_date
+from pyspark.sql.functions import col, to_timestamp, from_utc_timestamp, max as sql_max, row_number
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 from functools import reduce
@@ -264,8 +264,8 @@ def get_df_distinct(df, primary_key_list, order_by_list):
     if order_by_list:
         window_spec = (
             Window
-            .partitionBy(*[col(f"`{column}`") for column in primary_key_list])
-            .orderBy(*[col(f"`{column}`").desc() for column in order_by_list])
+            .partitionBy(*[col(column) for column in primary_key_list])
+            .orderBy(*[col(column).desc() for column in order_by_list])
         )
 
         df = (
@@ -333,7 +333,7 @@ def write_overwrite(df, logical_path, partition_by_list = None):
         .format('delta')
 
     if partition_by_list:
-        writer = writer.partitionBy(partition_by_list)
+        writer = writer.partitionBy(*partition_by_list)
 
     save_path = get_deltalake_path('relative', logical_path)
     writer.save(save_path)
@@ -345,7 +345,7 @@ def write_append(df, logical_path, partition_by_list = None):
         .format('delta')
 
     if partition_by_list:
-        writer = writer.partitionBy(partition_by_list)
+        writer = writer.partitionBy(*partition_by_list)
 
     save_path = get_deltalake_path('relative', logical_path)
     writer.save(save_path)
@@ -381,45 +381,33 @@ def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None,
         .execute()
 
 def get_partition_filter(df, partition_by_list):
-    parts = df.select(*partition_by_list).distinct().collect()
+    partition_df = df.select(*partition_by_list).distinct().collect()
 
-    if not parts:
+    if not partition_df:
         return None
 
-    if len(partition_by_list) == 1:
-        partition_column = partition_by_list[0]
-        partition_values = []
+    partition_disjunctions = []
 
-        for partition_row in parts:
+    for partition_row in partition_df:
+        predicates = []
+
+        for partition_column in partition_by_list:
             partition_value = partition_row[partition_column]
+
             if partition_value is None:
-                partition_values.append("null")
+                predicates.append(f"target.`{partition_column}` is null")
             else:
                 escaped_value = str(partition_value).replace("'", "''")
-                partition_values.append(f"'{escaped_value}'")
+                predicates.append(f"target.`{partition_column}` = '{escaped_value}'")
 
-        partition_filter = (f"target.`{partition_column}` in ({', '.join(partition_values)})")
+        if len(predicates) == 1:
+            partition_disjunctions.append(predicates[0])
+        else:
+            partition_disjunctions.append("(" + " and ".join(predicates) + ")")
 
-    else:
-        partition_disjunctions = []
-
-        for partition_row in parts:
-            partition_conjunctions = []
-
-            for partition_column in partition_by_list:
-                partition_value = partition_row[partition_column]
-
-                if partition_value is None:
-                    partition_conjunctions.append(f"target.`{partition_column}` is null")
-                else:
-                    escaped_value = str(partition_value).replace("'", "''")
-                    partition_conjunctions.append(f"target.`{partition_column}` = '{escaped_value}'")
-
-            partition_disjunctions.append("(" + " and ".join(partition_conjunctions) + ")")
-
-        partition_filter = "(" + " or ".join(partition_disjunctions) + ")"
-
-    return partition_filter
+    result = "(" + " or ".join(partition_disjunctions) + ")"
+    
+    return result 
 
 def write_to_silver(df, logical_path, column_map, write_method, partition_update):
     column_map = get_json_map(column_map)
