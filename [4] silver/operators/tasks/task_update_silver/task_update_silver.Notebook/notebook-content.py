@@ -48,7 +48,7 @@ from pyspark.sql.types import BooleanType
 target_path = "deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry"
 source_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 write_method = 'overwrite'
-partition_update = 'True'
+partition_update = 'true'
 schema = """
     [
         {"expression":"id","column_type":"int","column_name":"Id","column_order":1,"is_filter":0,"is_primary_key":1,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
@@ -58,7 +58,7 @@ schema = """
         {"expression":"natural_gift_power","column_type":"int","column_name":"NaturalGiftPower","column_order":5,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
         {"expression":"size","column_type":"int","column_name":"Size","column_order":6,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
         {"expression":"smoothness","column_type":"int","column_name":"Smoothness","column_order":7,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
-        {"expression":"soil_dryness","column_type":"int","column_name":"SoilDyrness","column_order":8,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
+        {"expression":"soil_dryness","column_type":"int","column_name":"SoilDryness","column_order":8,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
         {"expression":"firmness_name","column_type":"string","column_name":"FirmnessName","column_order":9,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
         {"expression":"firmness_url","column_type":"string","column_name":"FirmnessUrl","column_order":10,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
         {"expression":"item_name","column_type":"string","column_name":"ItemName","column_order":11,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
@@ -145,7 +145,7 @@ def get_magic_expr(expression):
 
     func_regex = r"#([^()]+)\("
     function = re.match(func_regex, expression).group(1)
-
+        
     if function == 'datetime1':
         result = f"to_timestamp(`{source_name}`, 'yyyy-MM-dd HH:mm:ss')"
     elif function == "datetime2":
@@ -335,7 +335,7 @@ def write_overwrite(df, logical_path, partition_by_list = None):
     if partition_by_list:
         writer = writer.partitionBy(*partition_by_list)
 
-    save_path = get_deltalake_path('relative', logical_path)
+    save_path = get_internal_path('abfss', logical_path)
     writer.save(save_path)
 
 def write_append(df, logical_path, partition_by_list = None):
@@ -347,14 +347,21 @@ def write_append(df, logical_path, partition_by_list = None):
     if partition_by_list:
         writer = writer.partitionBy(*partition_by_list)
 
-    save_path = get_deltalake_path('relative', logical_path)
+    save_path = get_internal_path("abfss", logical_path)
     writer.save(save_path)
 
-def write_bk_merge(df, logical_path, batch_key_list, partition_by_list = None):
+def write_bk_merge(df, logical_path, batch_key_list, partition_by_list=None, partition_update=False):
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
-    join_condition = " and ".join([f"target.{batch_key} = updates.{batch_key}" for batch_key in batch_key_list])
 
-    delta_path = get_deltalake_path('relative', logical_path)
+    join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
+
+    if partition_by_list and partition_update:
+        partition_filter = get_partition_filter(df, partition_by_list)
+        if partition_filter:
+            join_condition = f"{join_condition} and {partition_filter}"
+
+    delta_path = get_internal_path("abfss", logical_path)
+
     DeltaTable.forPath(spark, delta_path).alias("target") \
         .merge(df_batch.alias("updates"), join_condition) \
         .whenMatchedDelete() \
@@ -371,7 +378,7 @@ def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None,
         if partition_filter:
             join_condition = f"{pk_condition} and {partition_filter}"
 
-    delta_path = get_deltalake_path("relative", logical_path)
+    delta_path = get_internal_path("abfss", logical_path)
 
     DeltaTable.forPath(spark, delta_path) \
         .alias("target") \
