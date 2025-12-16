@@ -23,6 +23,7 @@ from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 from functools import reduce
 from operator import and_
+from pyspark.sql.types import BooleanType
 
 # METADATA ********************
 
