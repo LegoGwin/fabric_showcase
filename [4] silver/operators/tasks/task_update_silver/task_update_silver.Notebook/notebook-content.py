@@ -70,8 +70,8 @@ schema = """
         {"expression":"partition","column_type":"string","column_name":"Partition","column_order":18,"is_filter":0,"is_primary_key":0,"is_batch_key":0,"is_order_by":1,"is_output":1,"is_partition_by":0}
     ]
     """
-partition_name = 'partition'
-min_partition = '20250512105513'
+extract_partition = 'partition'
+min_extract_partition = '20250512105513'
 full_refresh = 'false'
 
 # METADATA ********************
@@ -89,11 +89,11 @@ full_refresh = full_refresh.strip().lower() == 'true'
 abfss_path = get_deltalake_path('abfss', target_path)
 if not DeltaTable.isDeltaTable(spark, abfss_path):
     full_refresh = True
-elif min_partition is None:
+elif min_extract_partition is None:
     full_refresh = True
 
 if full_refresh:
-    min_partition = None
+    min_extract_partition = None
     write_method = 'overwrite'
 
 # METADATA ********************
@@ -105,12 +105,12 @@ if full_refresh:
 
 # CELL ********************
 
-def read_bronze_table(logical_path, partition_name, min_partition = None):
+def read_bronze_table(logical_path, extract_partition, min_extract_partition = None):
     abfss_path = get_internal_path('abfss', logical_path)
     df = spark.read.format('delta').load(abfss_path)
 
-    if min_partition:
-        df = df.filter(col(partition_name) >= min_partition)
+    if min_extract_partition:
+        df = df.filter(col(extract_partition) >= min_extract_partition)
 
     return df
 
@@ -123,7 +123,7 @@ def read_bronze_table(logical_path, partition_name, min_partition = None):
 
 # CELL ********************
 
-df_source = read_bronze_table(source_path, partition_name, min_partition)
+df_source = read_bronze_table(source_path, extract_partition, min_extract_partition)
 
 # METADATA ********************
 
@@ -357,7 +357,7 @@ def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None,
     if partition_by_list and partition_update:
         partition_filter = get_partition_filter(df, partition_by_list)
         if partition_filter:
-            join_condition = f"{pk_condition} AND {partition_filter}"
+            join_condition = f"{pk_condition} and {partition_filter}"
 
     delta_path = get_deltalake_path("relative", logical_path)
 
@@ -459,7 +459,7 @@ def get_max_partition(df, partition_column):
 
 # CELL ********************
 
-mssparkutils.notebook.exit(get_max_partition(df_source, partition_name))
+mssparkutils.notebook.exit(get_max_partition(df_source, extract_partition))
 
 # METADATA ********************
 
