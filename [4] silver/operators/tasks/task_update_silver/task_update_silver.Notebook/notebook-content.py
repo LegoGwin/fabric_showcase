@@ -220,10 +220,21 @@ def get_df_selected(df, select_list):
     return df
 
 def get_df_filtered(df, filter_list):
-    filter_expr = reduce(and_, (col(filter) for filter in filter_list))
-    df = df.filter(filter_expr)
+    # validate columns exist
+    schema_by_name = {field.name: field.dataType for field in df.schema.fields}
 
-    return df
+    missing = [c for c in filter_list if c not in schema_by_name]
+    if missing:
+        raise ValueError(f"filter_list contains columns not in dataframe: {missing}")
+
+    non_bool = [(c, schema_by_name[c]) for c in filter_list if not isinstance(schema_by_name[c], BooleanType)]
+    if non_bool:
+        details = ", ".join([f"{c}={t.simpleString()}" for c, t in non_bool])
+        raise TypeError(f"filter_list columns must be boolean. Non-boolean columns: {details}")
+
+    # apply boolean AND across all filter columns
+    filter_expr = reduce(and_, (col(c) for c in filter_list))
+    return df.filter(filter_expr)
 
 def get_last_batch(df, batch_key_list, order_by_list):
     agg_exprs = [sql_max(s).alias(f"max_{s}") for s in order_by_list]
@@ -444,7 +455,7 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 
 # CELL ********************
 
-def get_max_partition(df, partition_column):
+def get_max_extract_partition(df, partition_column):
     row = (df.selectExpr(f"max(`{partition_column}`) as max_value").first())
     result =  row["max_value"] if row else None
     
@@ -459,7 +470,7 @@ def get_max_partition(df, partition_column):
 
 # CELL ********************
 
-mssparkutils.notebook.exit(get_max_partition(df_source, extract_partition))
+mssparkutils.notebook.exit(get_max_extract_partition(df_source, extract_partition))
 
 # METADATA ********************
 
