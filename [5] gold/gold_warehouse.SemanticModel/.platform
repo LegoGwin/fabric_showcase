@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "gold_warehouse"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "02bb7c10-1125-b972-4e85-5ee5ffcb7f30"
+  }
+}

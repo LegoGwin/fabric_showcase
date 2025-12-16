@@ -191,8 +191,9 @@ def get_batch_key_list(column_map):
     return result
 
 def get_order_by_list(column_map):
-    sorted_map = sorted(column_map, key = lambda x: x['is_order_by'])
-    result = [column['column_name'] for column in sorted_map if column.get('is_order_by') > 0]
+    filtered = [column for column in column_map if column["is_order_by"] > 0]
+    ordered = sorted(filtered, key = lambda column: column["is_order_by"])
+    result = [column["column_name"] for column in ordered]
     return result
 
 def get_output_list(column_map):
@@ -200,8 +201,9 @@ def get_output_list(column_map):
     return result
 
 def get_partition_by_list(column_map):
-    sorted_map = sorted(column_map, key = lambda x: x['is_partition_by'])
-    result = [column['column_name'] for column in column_map if column.get('is_partition_by') > 0]
+    filtered = [column for column in column_map if column["is_partition_by"] > 0]
+    ordered = sorted(filtered, key = lambda column: column["is_partition_by"])
+    result = [column["column_name"] for column in ordered]
     return result
 
 # METADATA ********************
@@ -248,10 +250,17 @@ def get_last_batch(df, batch_key_list, order_by_list):
 
 def get_df_distinct(df, primary_key_list, order_by_list):
     if order_by_list:
-        window_spec = Window.partitionBy(*primary_key_list).orderBy(*[col(col_name).desc() for col_name in order_by_list])
-        df = df.withColumn("row_number", row_number().over(window_spec))
-        df = df.filter(col("row_number") == 1)
-        df = df.drop("row_number")
+        window_spec = (
+            Window
+            .partitionBy(*[col(f"`{column}`") for column in primary_key_list])
+            .orderBy(*[col(f"`{column}`").desc() for column in order_by_list])
+        )
+
+        df = (
+            df.withColumn("_row_number", row_number().over(window_spec))
+              .filter(col("_row_number") == 1)
+              .drop("_row_number")
+        )
     else:
         df = df.dropDuplicates(primary_key_list)
 
@@ -342,21 +351,63 @@ def write_bk_merge(df, logical_path, batch_key_list, partition_by_list = None):
     write_append(df, logical_path, partition_by_list)
 
 def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None, partition_update = False):
-    
-    join_condition = " and ".join([f"target.`{primary_key}` = updates.`{primary_key}`" for primary_key in primary_key_list])
-    if partition_by_list and partition_update:
-        partition_df = df.select(partition_by_list).distinct().collect()
-        partition_values = [f"'{row[partition_by_list]}'" for row in partition_df]
-        partition_string = ', '.join(partition_values)
-        partition_filter = f"target.`{partition_by_list}` in ({partition_string})"
-        join_condition = f'{join_condition} and {partition_filter}'
+    pk_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in primary_key_list])
+    join_condition = pk_condition
 
-    delta_path = get_deltalake_path('relative', logical_path)
-    DeltaTable.forPath(spark, delta_path).alias("target") \
+    if partition_by_list and partition_update:
+        partition_filter = get_partition_filter(df, partition_by_list)
+        if partition_filter:
+            join_condition = f"{pk_condition} AND {partition_filter}"
+
+    delta_path = get_deltalake_path("relative", logical_path)
+
+    DeltaTable.forPath(spark, delta_path) \
+        .alias("target") \
         .merge(df.alias("updates"), join_condition) \
         .whenMatchedUpdateAll() \
         .whenNotMatchedInsertAll() \
         .execute()
+
+def get_partition_filter(df, partition_by_list):
+    parts = df.select(*partition_by_list).distinct().collect()
+
+    if not parts:
+        return None
+
+    if len(partition_by_list) == 1:
+        partition_column = partition_by_list[0]
+        partition_values = []
+
+        for partition_row in parts:
+            partition_value = partition_row[partition_column]
+            if partition_value is None:
+                partition_values.append("null")
+            else:
+                escaped_value = str(partition_value).replace("'", "''")
+                partition_values.append(f"'{escaped_value}'")
+
+        partition_filter = (f"target.`{partition_column}` in ({', '.join(partition_values)})")
+
+    else:
+        partition_disjunctions = []
+
+        for partition_row in parts:
+            partition_conjunctions = []
+
+            for partition_column in partition_by_list:
+                partition_value = partition_row[partition_column]
+
+                if partition_value is None:
+                    partition_conjunctions.append(f"target.`{partition_column}` is null")
+                else:
+                    escaped_value = str(partition_value).replace("'", "''")
+                    partition_conjunctions.append(f"target.`{partition_column}` = '{escaped_value}'")
+
+            partition_disjunctions.append("(" + " and ".join(partition_conjunctions) + ")")
+
+        partition_filter = "(" + " or ".join(partition_disjunctions) + ")"
+
+    return partition_filter
 
 def write_to_silver(df, logical_path, column_map, write_method, partition_update):
     column_map = get_json_map(column_map)
@@ -393,8 +444,9 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 
 # CELL ********************
 
-def get_max_partition(df, partition_name):
-    result = df.select(sql_max(col(partition_name)).alias(partition_name)).collect()[0][partition_name]
+def get_max_partition(df, partition_column):
+    row = (df.selectExpr(f"max(`{partition_column}`) as max_value").first())
+    result =  row["max_value"] if row else None
     
     return result
 
