@@ -139,14 +139,25 @@ def get_json_map(column_map):
     result = json.loads(column_map)
     return result
 
-def get_magic_expr(expression):
-    name_regex = r"#\w+\(([^)]+)\)"
-    source_name = re.match(name_regex, expression).group(1)
+def get_magic_expr(expression: str) -> str:
+    if expression is None:
+        raise ValueError("Invalid magic expression: None. Expected format like #func(col), e.g. #datetime1(order_dt).")
 
-    func_regex = r"#([^()]+)\("
-    function = re.match(func_regex, expression).group(1)
-        
-    if function == 'datetime1':
+    expr = str(expression).strip()
+
+    name_regex = r"^#\w+\(([^)]+)\)$"
+    name_match = re.match(name_regex, expr)
+    if not name_match:
+        raise ValueError(f"Invalid magic expression: {expr!r}. Expected format like #func(col), e.g. #datetime1(order_dt), #datetime2(order_dt), #datetime3(order_dt).")
+    source_name = name_match.group(1).strip()
+
+    func_regex = r"^#([^()]+)\("
+    func_match = re.match(func_regex, expr)
+    if not func_match:
+        raise ValueError(f"Invalid magic expression: {expr!r}. Could not parse function name. Expected format like #func(col).")
+    function = func_match.group(1).strip()
+
+    if function == "datetime1":
         result = f"to_timestamp(`{source_name}`, 'yyyy-MM-dd HH:mm:ss')"
     elif function == "datetime2":
         result = f"from_utc_timestamp(to_timestamp(`{source_name}`, 'yyyy-MM-dd HH:mm:ss'), 'America/New_York')"
@@ -221,44 +232,35 @@ def get_df_selected(df, select_list):
     return df
 
 def get_df_filtered(df, filter_list):
-    # validate columns exist
     schema_by_name = {field.name: field.dataType for field in df.schema.fields}
 
-    missing = [c for c in filter_list if c not in schema_by_name]
+    missing = [column for column in filter_list if column not in schema_by_name]
     if missing:
-        raise ValueError(f"filter_list contains columns not in dataframe: {missing}")
+        raise ValueError(f"Filter_list contains columns not in dataframe: {missing}")
 
     non_bool = [(c, schema_by_name[c]) for c in filter_list if not isinstance(schema_by_name[c], BooleanType)]
     if non_bool:
         details = ", ".join([f"{c}={t.simpleString()}" for c, t in non_bool])
-        raise TypeError(f"filter_list columns must be boolean. Non-boolean columns: {details}")
+        raise TypeError(f"Filter_list columns must be boolean. Non-boolean columns: {details}")
 
-    # apply boolean AND across all filter columns
     filter_expr = reduce(and_, (col(c) for c in filter_list))
-    return df.filter(filter_expr)
+    df_filtered = df.filter(filter_expr)
+
+    return df_filtered
 
 def get_last_batch(df, batch_key_list, order_by_list):
-    agg_exprs = [sql_max(s).alias(f"max_{s}") for s in order_by_list]
-    df_max = df.groupBy(*batch_key_list).agg(*agg_exprs)
+    w = (
+        Window
+        .partitionBy(*[F.col(c) for c in batch_key_list])
+        .orderBy(*[F.col(c).desc_nulls_last() for c in order_by_list])
+    )
 
-    for k in batch_key_list:
-        df_max = df_max.withColumnRenamed(k, f"max_{k}")
-
-    join_condition = None
-    for k in batch_key_list:
-        cond = (df[k] == df_max[f"max_{k}"])
-        join_condition = cond if join_condition is None else (join_condition & cond)
-
-    for s in order_by_list:
-        cond = (df[s] == df_max[f"max_{s}"])
-        join_condition = join_condition & cond
-
-    df_joined = df.join(df_max, join_condition, "inner")
-
-    columns_to_drop = [f"max_{k}" for k in batch_key_list] + [f"max_{s}" for s in order_by_list]
-    df_joined = df_joined.drop(*columns_to_drop)
-
-    return df_joined
+    return (
+        df
+        .withColumn("_rk", F.dense_rank().over(w))
+        .filter(F.col("_rk") == 1)
+        .drop("_rk")
+    )
 
 def get_df_distinct(df, primary_key_list, order_by_list):
     if order_by_list:
@@ -452,7 +454,7 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 # CELL ********************
 
 def get_max_extract_partition(df, partition_column):
-    row = (df.selectExpr(f"max(`{partition_column}`) as max_value").first())
+    row = df.selectExpr(f"max(`{partition_column}`) as max_value").first()
     result =  row["max_value"] if row else None
     
     return result
