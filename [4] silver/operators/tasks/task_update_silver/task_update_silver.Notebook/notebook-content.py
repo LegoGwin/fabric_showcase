@@ -87,8 +87,8 @@ full_refresh = 'false'
 partition_update = partition_update.strip().lower() == 'true'
 full_refresh = full_refresh.strip().lower() == 'true'
 
-abfss_path = get_deltalake_path('abfss', target_path)
-if not DeltaTable.isDeltaTable(spark, abfss_path):
+target_path = get_internal_path('abfss', target_path)
+if not DeltaTable.isDeltaTable(spark, target_path):
     full_refresh = True
 elif min_extract_partition is None:
     full_refresh = True
