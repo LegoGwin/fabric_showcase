@@ -358,7 +358,7 @@ def write_bk_merge(df, logical_path, batch_key_list, partition_by_list=None, par
     if partition_by_list and partition_update:
         partition_filter = get_partition_filter(df, partition_by_list)
         if partition_filter:
-            join_condition = f"{join_condition} and {partition_filter}"
+            join_condition = f"({join_condition} and {partition_filter})"
 
     delta_path = get_internal_path("abfss", logical_path)
 
@@ -376,7 +376,7 @@ def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None,
     if partition_by_list and partition_update:
         partition_filter = get_partition_filter(df, partition_by_list)
         if partition_filter:
-            join_condition = f"{pk_condition} and {partition_filter}"
+            join_condition = f"({pk_condition} and {partition_filter})"
 
     delta_path = get_internal_path("abfss", logical_path)
 
@@ -425,7 +425,7 @@ def write_to_silver(df, logical_path, column_map, write_method, partition_update
     if write_method == 'overwrite':
         write_overwrite(df, logical_path, partition_by_list)
     elif batch_key_list:
-        write_bk_merge(df, logical_path, batch_key_list, partition_by_list)
+        write_bk_merge(df, logical_path, batch_key_list, partition_by_list, partition_update)
     elif primary_key_list:
         write_pk_merge(df, logical_path, primary_key_list, partition_by_list, partition_update)
     else:
