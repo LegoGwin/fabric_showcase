@@ -18,7 +18,7 @@
 
 import json
 import re
-from pyspark.sql.functions import col, to_timestamp, from_utc_timestamp, max as sql_max, row_number
+import pyspark.sql.functions as sql_functions
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 from functools import reduce
@@ -148,7 +148,7 @@ def get_magic_expr(expression: str) -> str:
     name_regex = r"^#\w+\(([^)]+)\)$"
     name_match = re.match(name_regex, expr)
     if not name_match:
-        raise ValueError(f"Invalid magic expression: {expr!r}. Expected format like #func(col), e.g. #datetime1(order_dt), #datetime2(order_dt), #datetime3(order_dt).")
+        raise ValueError(f"Invalid magic expression: {expr!r}. Expected format like #func(col), e.g. #datetime1(order_dt)")
     source_name = name_match.group(1).strip()
 
     func_regex = r"^#([^()]+)\("
