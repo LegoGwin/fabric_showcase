@@ -24,6 +24,7 @@ from delta.tables import DeltaTable
 from functools import reduce
 from operator import and_
 from pyspark.sql.types import BooleanType
+from typing import Dict, List, Any
 
 # METADATA ********************
 
@@ -139,7 +140,7 @@ def get_json_map(column_map):
     result = json.loads(column_map)
     return result
 
-def get_magic_expr(expression: str) -> str:
+def get_magic_expr(expression):
     if expression is None:
         raise ValueError("Invalid magic expression: None. Expected format like #func(col), e.g. #datetime1(order_dt).")
 
@@ -428,17 +429,19 @@ def get_partition_filter(df, partition_by_list):
 def write_to_silver(df, logical_path, column_map, write_method, partition_update):
     column_map = get_json_map(column_map)
     partition_by_list = get_partition_by_list(column_map)
-    batch_key_list = get_batch_key_list(column_map)
-    primary_key_list = get_primary_key_list(column_map)
 
     if write_method == 'overwrite':
         write_overwrite(df, logical_path, partition_by_list)
-    elif batch_key_list:
+    elif write_method = 'bk_merge':
+        batch_key_list = get_batch_key_list(column_map)
         write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_list, partition_update)
-    elif primary_key_list:
+    elif write_method = 'pk_merge':
+        primary_key_list = get_primary_key_list(column_map)
         write_pk_merge(df, logical_path, primary_key_list, partition_by_list, partition_update)
-    else:
+    elif write_method = 'append':
         write_append(df, logical_path, partition_by_list)
+    else:
+        raise ValueError('Write method not recognized')
 
 # METADATA ********************
 
