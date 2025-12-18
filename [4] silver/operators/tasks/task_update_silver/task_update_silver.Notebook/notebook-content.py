@@ -258,9 +258,9 @@ def apply_latest_keep_ties(df, batch_key_list, order_by_list):
 
     df = (
         df
-        .withColumn("_rk", sql_functions.dense_rank().over(window_spec))
-        .filter(sql_functions.col("_rk") == 1)
-        .drop("_rk")
+        .withColumn("_dense_rank", sql_functions.dense_rank().over(window_spec))
+        .filter(sql_functions.col("_dense_rank") == 1)
+        .drop("_dense_rank")
     )
 
     return df
@@ -331,7 +331,7 @@ df = transform_df(df_source, schema)
 
 # CELL ********************
 
-def write_overwrite(df, logical_path, partition_by_list = None):
+def write_overwrite(df, target_path, partition_by_list = None):
     writer = df.write \
         .mode('overwrite') \
         .option('overwriteSchema', 'true') \
@@ -340,10 +340,9 @@ def write_overwrite(df, logical_path, partition_by_list = None):
     if partition_by_list:
         writer = writer.partitionBy(*partition_by_list)
 
-    save_path = get_internal_path('abfss', logical_path)
-    writer.save(save_path)
+    writer.save(target_path)
 
-def write_append(df, logical_path, partition_by_list = None):
+def write_append(df, target_path, partition_by_list = None):
     writer = df.write \
         .mode('append') \
         .option('mergeSchema', 'false') \
@@ -352,10 +351,9 @@ def write_append(df, logical_path, partition_by_list = None):
     if partition_by_list:
         writer = writer.partitionBy(*partition_by_list)
 
-    save_path = get_internal_path("abfss", logical_path)
-    writer.save(save_path)
+    writer.save(target_path)
 
-def write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_list=None, partition_update=False):
+def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list=None, partition_update=False):
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
@@ -365,16 +363,14 @@ def write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_li
         if partition_filter:
             join_condition = f"({join_condition} and {partition_filter})"
 
-    delta_path = get_internal_path("abfss", logical_path)
-
-    DeltaTable.forPath(spark, delta_path).alias("target") \
+    DeltaTable.forPath(spark, target_path).alias("target") \
         .merge(df_batch.alias("updates"), join_condition) \
         .whenMatchedDelete() \
         .execute()
 
-    write_append(df, logical_path, partition_by_list)
+    write_append(df, target_path, partition_by_list)
 
-def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None, partition_update = False):
+def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, partition_update = False):
     pk_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in primary_key_list])
     join_condition = pk_condition
 
@@ -383,9 +379,7 @@ def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None,
         if partition_filter:
             join_condition = f"({pk_condition} and {partition_filter})"
 
-    delta_path = get_internal_path("abfss", logical_path)
-
-    DeltaTable.forPath(spark, delta_path) \
+    DeltaTable.forPath(spark, target_path) \
         .alias("target") \
         .merge(df.alias("updates"), join_condition) \
         .whenMatchedUpdateAll() \
@@ -422,7 +416,7 @@ def get_partition_filter(df, partition_by_list):
     max_predicate_chars = 512
 
     if len(result) > max_predicate_chars:
-        raise ValueError('Predicate is too large for a partition merge')
+        raise ValueError('Predicate is too large for a partition merge.')
 
     return result 
 
@@ -432,13 +426,13 @@ def write_to_silver(df, logical_path, column_map, write_method, partition_update
 
     if write_method == 'overwrite':
         write_overwrite(df, logical_path, partition_by_list)
-    elif write_method = 'bk_merge':
+    elif write_method == 'bk_merge':
         batch_key_list = get_batch_key_list(column_map)
         write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_list, partition_update)
-    elif write_method = 'pk_merge':
+    elif write_method == 'pk_merge':
         primary_key_list = get_primary_key_list(column_map)
         write_pk_merge(df, logical_path, primary_key_list, partition_by_list, partition_update)
-    elif write_method = 'append':
+    elif write_method == 'append':
         write_append(df, logical_path, partition_by_list)
     else:
         raise ValueError('Write method not recognized')
