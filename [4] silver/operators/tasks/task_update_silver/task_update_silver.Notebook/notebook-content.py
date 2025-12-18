@@ -248,7 +248,7 @@ def get_df_filtered(df, filter_list):
 
     return df_filtered
 
-def get_last_batch(df, batch_key_list, order_by_list):
+def apply_latest_keep_ties(df, batch_key_list, order_by_list):
     window_spec = (
         Window
         .partitionBy(*[sql_functions.col(c) for c in batch_key_list])
@@ -264,7 +264,7 @@ def get_last_batch(df, batch_key_list, order_by_list):
 
     return df
 
-def get_df_distinct(df, primary_key_list, order_by_list):
+def apply_latest_break_ties(df, primary_key_list, order_by_list):
     if order_by_list:
         window_spec = (
             Window
@@ -299,11 +299,11 @@ def transform_df(df, column_map):
     batch_key_list = get_batch_key_list(column_map)
     order_by_list = get_order_by_list(column_map)
     if batch_key_list and order_by_list:
-        df = get_last_batch(df, batch_key_list, order_by_list)
+        df = apply_latest_keep_ties(df, batch_key_list, order_by_list)
 
     primary_key_list = get_primary_key_list(column_map)
     if primary_key_list:
-        df = get_df_distinct(df, primary_key_list, order_by_list)
+        df = apply_latest_break_ties(df, primary_key_list, order_by_list)
     
     output_list = get_output_list(column_map)
     df = get_df_outputs(df, output_list)
@@ -354,7 +354,7 @@ def write_append(df, logical_path, partition_by_list = None):
     save_path = get_internal_path("abfss", logical_path)
     writer.save(save_path)
 
-def write_bk_merge(df, logical_path, batch_key_list, partition_by_list=None, partition_update=False):
+def write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_list=None, partition_update=False):
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
@@ -418,6 +418,11 @@ def get_partition_filter(df, partition_by_list):
 
     result = "(" + " or ".join(partition_disjunctions) + ")"
     
+    max_predicate_chars = 512
+
+    if len(result) > max_predicate_chars:
+        raise ValueError('Predicate is too large for a partition merge')
+
     return result 
 
 def write_to_silver(df, logical_path, column_map, write_method, partition_update):
@@ -429,7 +434,7 @@ def write_to_silver(df, logical_path, column_map, write_method, partition_update
     if write_method == 'overwrite':
         write_overwrite(df, logical_path, partition_by_list)
     elif batch_key_list:
-        write_bk_merge(df, logical_path, batch_key_list, partition_by_list, partition_update)
+        write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_list, partition_update)
     elif primary_key_list:
         write_pk_merge(df, logical_path, primary_key_list, partition_by_list, partition_update)
     else:
