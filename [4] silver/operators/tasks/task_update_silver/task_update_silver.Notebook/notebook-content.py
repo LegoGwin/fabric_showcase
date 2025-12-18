@@ -111,7 +111,7 @@ def read_bronze_table(logical_path, extract_partition, min_extract_partition = N
     df = spark.read.format('delta').load(abfss_path)
 
     if min_extract_partition:
-        df = df.filter(col(extract_partition) >= min_extract_partition)
+        df = sql_functions.filter(col(extract_partition) >= min_extract_partition)
 
     return df
 
@@ -228,11 +228,11 @@ def get_partition_by_list(column_map):
 # CELL ********************
 
 def get_df_selected(df, select_list):
-    df = df.selectExpr(*select_list)
+    df = sql_functions.selectExpr(*select_list)
     return df
 
 def get_df_filtered(df, filter_list):
-    schema_by_name = {field.name: field.dataType for field in df.schema.fields}
+    schema_by_name = {field.name: field.dataType for field in sql_functions.schema.fields}
 
     missing = [column for column in filter_list if column not in schema_by_name]
     if missing:
@@ -244,21 +244,21 @@ def get_df_filtered(df, filter_list):
         raise TypeError(f"Filter_list columns must be boolean. Non-boolean columns: {details}")
 
     filter_expr = reduce(and_, (col(c) for c in filter_list))
-    df_filtered = df.filter(filter_expr)
+    df_filtered = sql_functions.filter(filter_expr)
 
     return df_filtered
 
 def get_last_batch(df, batch_key_list, order_by_list):
     window_spec = (
         Window
-        .partitionBy(*[F.col(c) for c in batch_key_list])
-        .orderBy(*[F.col(c).desc_nulls_last() for c in order_by_list])
+        .partitionBy(*[sql_functions.col(c) for c in batch_key_list])
+        .orderBy(*[sql_functions.col(c).desc_nulls_last() for c in order_by_list])
     )
 
     df = (
         df
-        .withColumn("_rk", F.dense_rank().over(window_spec))
-        .filter(F.col("_rk") == 1)
+        .withColumn("_rk", sql_functions.dense_rank().over(window_spec))
+        .filter(sql_functions.col("_rk") == 1)
         .drop("_rk")
     )
 
@@ -273,17 +273,17 @@ def get_df_distinct(df, primary_key_list, order_by_list):
         )
 
         df = (
-            df.withColumn("_row_number", row_number().over(window_spec))
+            sql_functions.withColumn("_row_number", row_number().over(window_spec))
               .filter(col("_row_number") == 1)
               .drop("_row_number")
         )
     else:
-        df = df.dropDuplicates(primary_key_list)
+        df = sql_functions.dropDuplicates(primary_key_list)
 
     return df
 
 def get_df_outputs(df, output_list):
-    df = df.selectExpr(*output_list)
+    df = sql_functions.selectExpr(*output_list)
     return df
 
 def transform_df(df, column_map):
@@ -331,7 +331,7 @@ df = transform_df(df_source, schema)
 # CELL ********************
 
 def write_overwrite(df, logical_path, partition_by_list = None):
-    writer = df.write \
+    writer = sql_functions.write \
         .mode('overwrite') \
         .option('overwriteSchema', 'true') \
         .format('delta')
@@ -343,7 +343,7 @@ def write_overwrite(df, logical_path, partition_by_list = None):
     writer.save(save_path)
 
 def write_append(df, logical_path, partition_by_list = None):
-    writer = df.write \
+    writer = sql_functions.write \
         .mode('append') \
         .option('mergeSchema', 'false') \
         .format('delta')
@@ -355,7 +355,7 @@ def write_append(df, logical_path, partition_by_list = None):
     writer.save(save_path)
 
 def write_bk_merge(df, logical_path, batch_key_list, partition_by_list=None, partition_update=False):
-    df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
+    df_batch = sql_functions.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
 
@@ -386,13 +386,13 @@ def write_pk_merge(df, logical_path, primary_key_list, partition_by_list = None,
 
     DeltaTable.forPath(spark, delta_path) \
         .alias("target") \
-        .merge(df.alias("updates"), join_condition) \
+        .merge(sql_functions.alias("updates"), join_condition) \
         .whenMatchedUpdateAll() \
         .whenNotMatchedInsertAll() \
         .execute()
 
 def get_partition_filter(df, partition_by_list):
-    partition_df = df.select(*partition_by_list).distinct().collect()
+    partition_df = sql_functions.select(*partition_by_list).distinct().collect()
 
     if not partition_df:
         return None
@@ -456,7 +456,7 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 # CELL ********************
 
 def get_max_extract_partition(df, partition_column):
-    row = df.selectExpr(f"max(`{partition_column}`) as max_value").first()
+    row = sql_functions.selectExpr(f"max(`{partition_column}`) as max_value").first()
     result =  row["max_value"] if row else None
     
     return result
