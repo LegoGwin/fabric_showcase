@@ -428,10 +428,16 @@ def write_to_silver(df, target_path, column_map, write_method, partition_update)
         write_overwrite(df, target_path, partition_by_list)
     elif write_method == 'bk_merge':
         batch_key_list = get_batch_key_list(column_map)
-        write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partition_update)
+        if batch_key_list:
+            write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partition_update)
+        else:
+            raise ValueError('Batch key list is empty.')
     elif write_method == 'pk_merge':
         primary_key_list = get_primary_key_list(column_map)
-        write_pk_merge(df, target_path, primary_key_list, partition_by_list, partition_update)
+        if primary_key_list:
+            write_pk_merge(df, target_path, primary_key_list, partition_by_list, partition_update)
+        else:
+            raise ValueError('Primary key list is empty.')
     elif write_method == 'append':
         write_append(df, target_path, partition_by_list)
     else:
