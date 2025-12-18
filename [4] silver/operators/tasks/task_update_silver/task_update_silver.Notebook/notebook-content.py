@@ -352,7 +352,7 @@ def write_append(df, target_path, partition_by_list = None):
 
     writer.save(target_path)
 
-def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list=None, partition_update=False):
+def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list = None, partition_update = False):
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
