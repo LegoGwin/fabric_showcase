@@ -111,7 +111,7 @@ def read_bronze_table(logical_path, extract_partition, min_extract_partition = N
     df = spark.read.format('delta').load(abfss_path)
 
     if min_extract_partition:
-        df = df.filter(col(extract_partition) >= min_extract_partition)
+        df = df.filter(sql_functions.col(extract_partition) >= min_extract_partition)
 
     return df
 
@@ -243,7 +243,7 @@ def get_df_filtered(df, filter_list):
         details = ", ".join([f"{c}={t.simpleString()}" for c, t in non_bool])
         raise TypeError(f"Filter_list columns must be boolean. Non-boolean columns: {details}")
 
-    filter_expr = reduce(and_, (col(c) for c in filter_list))
+    filter_expr = reduce(and_, (sql_functions.col(c) for c in filter_list))
     df_filtered = df.filter(filter_expr)
 
     return df_filtered
@@ -268,17 +268,17 @@ def get_df_distinct(df, primary_key_list, order_by_list):
     if order_by_list:
         window_spec = (
             Window
-            .partitionBy(*[col(column) for column in primary_key_list])
-            .orderBy(*[col(column).desc() for column in order_by_list])
+            .partitionBy(*[sql_functions.col(column) for column in primary_key_list])
+            .orderBy(*[sql_functions.col(column).desc() for column in order_by_list])
         )
 
         df = (
-            df.withColumn("_row_number", row_number().over(window_spec))
-              .filter(col("_row_number") == 1)
+            df.withColumn("_row_number", sql_functions.row_number().over(window_spec))
+              .filter(sql_functions.col("_row_number") == 1)
               .drop("_row_number")
         )
     else:
-        df = sql_functions.dropDuplicates(primary_key_list)
+        df = df.dropDuplicates(primary_key_list)
 
     return df
 
@@ -456,7 +456,7 @@ write_to_silver(df, target_path, schema, write_method, partition_update)
 # CELL ********************
 
 def get_max_extract_partition(df, partition_column):
-    row = sql_functions.selectExpr(f"max(`{partition_column}`) as max_value").first()
+    row = df.selectExpr(f"max(`{partition_column}`) as max_value").first()
     result =  row["max_value"] if row else None
     
     return result
