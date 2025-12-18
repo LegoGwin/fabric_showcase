@@ -420,20 +420,20 @@ def get_partition_filter(df, partition_by_list):
 
     return result 
 
-def write_to_silver(df, logical_path, column_map, write_method, partition_update):
+def write_to_silver(df, target_path, column_map, write_method, partition_update):
     column_map = get_json_map(column_map)
     partition_by_list = get_partition_by_list(column_map)
 
     if write_method == 'overwrite':
-        write_overwrite(df, logical_path, partition_by_list)
+        write_overwrite(df, target_path, partition_by_list)
     elif write_method == 'bk_merge':
         batch_key_list = get_batch_key_list(column_map)
-        write_rebuild_by_batch_key(df, logical_path, batch_key_list, partition_by_list, partition_update)
+        write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partition_update)
     elif write_method == 'pk_merge':
         primary_key_list = get_primary_key_list(column_map)
-        write_pk_merge(df, logical_path, primary_key_list, partition_by_list, partition_update)
+        write_pk_merge(df, target_path, primary_key_list, partition_by_list, partition_update)
     elif write_method == 'append':
-        write_append(df, logical_path, partition_by_list)
+        write_append(df, target_path, partition_by_list)
     else:
         raise ValueError('Write method not recognized')
 
