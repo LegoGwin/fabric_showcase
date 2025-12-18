@@ -249,18 +249,20 @@ def get_df_filtered(df, filter_list):
     return df_filtered
 
 def get_last_batch(df, batch_key_list, order_by_list):
-    w = (
+    window_spec = (
         Window
         .partitionBy(*[F.col(c) for c in batch_key_list])
         .orderBy(*[F.col(c).desc_nulls_last() for c in order_by_list])
     )
 
-    return (
+    df = (
         df
-        .withColumn("_rk", F.dense_rank().over(w))
+        .withColumn("_rk", F.dense_rank().over(window_spec))
         .filter(F.col("_rk") == 1)
         .drop("_rk")
     )
+
+    return df
 
 def get_df_distinct(df, primary_key_list, order_by_list):
     if order_by_list:
