@@ -24,7 +24,6 @@ from delta.tables import DeltaTable
 from functools import reduce
 from operator import and_
 from pyspark.sql.types import BooleanType
-from typing import Dict, List, Any
 
 # METADATA ********************
 
@@ -386,11 +385,17 @@ def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, 
         .whenNotMatchedInsertAll() \
         .execute()
 
-def get_partition_filter(df, partition_by_list):
-    partition_df = df.select(*partition_by_list).distinct().collect()
+def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_predicate_chars = 32768):
+    if not partition_by_list:
+        raise ValueError("partition_by_list must be a non-empty list of columns.")
+
+    partition_df = df.select(*partition_by_list).distinct().limit(max_partitions + 1).collect()
 
     if not partition_df:
-        return None
+        raise ValueError("No partitions in the data.")
+
+    if len(partition_df) > max_partitions:
+        raise ValueError(f"Too many distinct partitions (> {max_partitions}). Check partition_by_list/metadata.")
 
     partition_disjunctions = []
 
@@ -413,8 +418,6 @@ def get_partition_filter(df, partition_by_list):
 
     result = "(" + " or ".join(partition_disjunctions) + ")"
     
-    max_predicate_chars = 512
-
     if len(result) > max_predicate_chars:
         raise ValueError('Predicate is too large for a partition merge.')
 
