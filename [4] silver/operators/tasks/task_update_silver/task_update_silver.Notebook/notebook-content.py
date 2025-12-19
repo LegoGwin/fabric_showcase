@@ -84,13 +84,12 @@ full_refresh = 'false'
 
 # CELL ********************
 
-def get_json_map(column_map):
-    result = json.loads(column_map)
-    return result
-column_map = get_json_map(schema)
+schema_json = json.loads(schema)
 
 partition_update = partition_update.strip().lower() == 'true'
 full_refresh = full_refresh.strip().lower() == 'true'
+
+source_path = get_internal_path('abfss', source_path)
 
 target_path = get_internal_path('abfss', target_path)
 if not DeltaTable.isDeltaTable(spark, target_path):
@@ -111,9 +110,8 @@ if full_refresh:
 
 # CELL ********************
 
-def read_bronze_table(logical_path, extract_partition, min_extract_partition = None):
-    abfss_path = get_internal_path('abfss', logical_path)
-    df = spark.read.format('delta').load(abfss_path)
+def read_bronze_table(source_path, extract_partition, min_extract_partition = None):
+    df = spark.read.format('delta').load(source_path)
 
     if min_extract_partition:
         df = df.filter(sql_functions.col(extract_partition) >= min_extract_partition)
@@ -185,36 +183,36 @@ def get_select_expr(column):
 
     return result
 
-def get_select_list(column_map):
-    sorted_map = sorted(column_map, key = lambda x: x['column_order'])
+def get_select_list(schema_json):
+    sorted_map = sorted(schema_json, key = lambda x: x['column_order'])
     result = [get_select_expr(column) for column in sorted_map]
 
     return result
 
-def get_filter_list(column_map):
-    result = [column['column_name'] for column in column_map if column.get('is_filter') == 1]
+def get_filter_list(schema_json):
+    result = [column['column_name'] for column in schema_json if column.get('is_filter') == 1]
     return result
 
-def get_primary_key_list(column_map):
-    result = [column['column_name'] for column in column_map if column.get('is_primary_key') == 1]
+def get_primary_key_list(schema_json):
+    result = [column['column_name'] for column in schema_json if column.get('is_primary_key') == 1]
     return result
 
-def get_batch_key_list(column_map):
-    result = [column['column_name'] for column in column_map if column.get('is_batch_key') == 1]
+def get_batch_key_list(schema_json):
+    result = [column['column_name'] for column in schema_json if column.get('is_batch_key') == 1]
     return result
 
-def get_order_by_list(column_map):
-    filtered = [column for column in column_map if column["is_order_by"] > 0]
+def get_order_by_list(schema_json):
+    filtered = [column for column in schema_json if column["is_order_by"] > 0]
     ordered = sorted(filtered, key = lambda column: column["is_order_by"])
     result = [column["column_name"] for column in ordered]
     return result
 
-def get_output_list(column_map):
-    result = [column['column_name'] for column in column_map if column.get('is_output') == 1]
+def get_output_list(schema_json):
+    result = [column['column_name'] for column in schema_json if column.get('is_output') == 1]
     return result
 
-def get_partition_by_list(column_map):
-    filtered = [column for column in column_map if column["is_partition_by"] > 0]
+def get_partition_by_list(schema_json):
+    filtered = [column for column in schema_json if column["is_partition_by"] > 0]
     ordered = sorted(filtered, key = lambda column: column["is_partition_by"])
     result = [column["column_name"] for column in ordered]
     return result
@@ -287,24 +285,24 @@ def get_df_outputs(df, output_list):
     df = df.selectExpr(*output_list)
     return df
 
-def transform_df(df, column_map):
-    select_list = get_select_list(column_map)
+def transform_df(df, schema_json):
+    select_list = get_select_list(schema_json)
     df = get_df_selected(df, select_list)
 
-    filter_list = get_filter_list(column_map)
+    filter_list = get_filter_list(schema_json)
     if filter_list:
         df = get_df_filtered(df, filter_list)
 
-    batch_key_list = get_batch_key_list(column_map)
-    order_by_list = get_order_by_list(column_map)
+    batch_key_list = get_batch_key_list(schema_json)
+    order_by_list = get_order_by_list(schema_json)
     if batch_key_list and order_by_list:
         df = apply_latest_keep_ties(df, batch_key_list, order_by_list)
 
-    primary_key_list = get_primary_key_list(column_map)
+    primary_key_list = get_primary_key_list(schema_json)
     if primary_key_list:
         df = apply_latest_break_ties(df, primary_key_list, order_by_list)
     
-    output_list = get_output_list(column_map)
+    output_list = get_output_list(schema_json)
     df = get_df_outputs(df, output_list)
 
     return df
@@ -318,7 +316,7 @@ def transform_df(df, column_map):
 
 # CELL ********************
 
-df = transform_df(df_source, schema)
+df = transform_df(df_source, schema_json)
 
 # METADATA ********************
 
@@ -351,7 +349,13 @@ def write_append(df, target_path, partition_by_list = None):
 
     writer.save(target_path)
 
+def drop_null_keys(df, key_list):
+    null_pred = reduce(lambda a,b: a | b, (F.col(k).isNull() for k in key_list))
+    return df.filter(~null_pred)
+
 def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list = None, partition_update = False):
+    df = drop_null_keys(df, batch_key_list)
+    
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
@@ -369,6 +373,8 @@ def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_lis
     write_append(df, target_path, partition_by_list)
 
 def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, partition_update = False):
+    df = drop_null_keys(df, primary_key_list)
+
     pk_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in primary_key_list])
     join_condition = pk_condition
 
@@ -422,19 +428,19 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
 
     return result 
 
-def write_to_silver(df, target_path, column_map, write_method, partition_update):
-    partition_by_list = get_partition_by_list(column_map)
+def write_to_silver(df, target_path, schema_json, write_method, partition_update):
+    partition_by_list = get_partition_by_list(schema_json)
 
     if write_method == 'overwrite':
         write_overwrite(df, target_path, partition_by_list)
     elif write_method == 'bk_merge':
-        batch_key_list = get_batch_key_list(column_map)
+        batch_key_list = get_batch_key_list(schema_json)
         if batch_key_list:
             write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partition_update)
         else:
             raise ValueError('Batch key list is empty.')
     elif write_method == 'pk_merge':
-        primary_key_list = get_primary_key_list(column_map)
+        primary_key_list = get_primary_key_list(schema_json)
         if primary_key_list:
             write_pk_merge(df, target_path, primary_key_list, partition_by_list, partition_update)
         else:
@@ -453,7 +459,7 @@ def write_to_silver(df, target_path, column_map, write_method, partition_update)
 
 # CELL ********************
 
-write_to_silver(df, target_path, schema, write_method, partition_update)
+write_to_silver(df, target_path, schema_json, write_method, partition_update)
 
 # METADATA ********************
 
