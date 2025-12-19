@@ -84,6 +84,11 @@ full_refresh = 'false'
 
 # CELL ********************
 
+def get_json_map(column_map):
+    result = json.loads(column_map)
+    return result
+column_map = get_json_map(schema)
+
 partition_update = partition_update.strip().lower() == 'true'
 full_refresh = full_refresh.strip().lower() == 'true'
 
@@ -135,10 +140,6 @@ df_source = read_bronze_table(source_path, extract_partition, min_extract_partit
 
 # CELL ********************
 
-def get_json_map(column_map):
-    result = json.loads(column_map)
-    return result
-
 def get_magic_expr(expression):
     if expression is None:
         raise ValueError("Invalid magic expression: None. Expected format like #func(col), e.g. #datetime1(order_dt).")
@@ -164,7 +165,7 @@ def get_magic_expr(expression):
     elif function == "datetime3":
         result = f"to_timestamp(regexp_replace(left(`{source_name}`, 19), 'T', ' '), 'yyyy-MM-dd HH:mm:ss')"
     else:
-        result = f"`{source_name}`"
+        raise ValueError('Unrecognized magic expression.')
 
     return result
 
@@ -269,7 +270,7 @@ def apply_latest_break_ties(df, primary_key_list, order_by_list):
         window_spec = (
             Window
             .partitionBy(*[sql_functions.col(column) for column in primary_key_list])
-            .orderBy(*[sql_functions.col(column).desc() for column in order_by_list])
+            .orderBy(*[sql_functions.col(column).desc_nulls_last() for column in order_by_list])
         )
 
         df = (
@@ -287,8 +288,6 @@ def get_df_outputs(df, output_list):
     return df
 
 def transform_df(df, column_map):
-    column_map = get_json_map(column_map)
-
     select_list = get_select_list(column_map)
     df = get_df_selected(df, select_list)
 
@@ -392,7 +391,7 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
     partition_df = df.select(*partition_by_list).distinct().limit(max_partitions + 1).collect()
 
     if not partition_df:
-        raise ValueError("No partitions in the data.")
+        return None
 
     if len(partition_df) > max_partitions:
         raise ValueError(f"Too many distinct partitions (> {max_partitions}). Check partition_by_list/metadata.")
@@ -424,7 +423,6 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
     return result 
 
 def write_to_silver(df, target_path, column_map, write_method, partition_update):
-    column_map = get_json_map(column_map)
     partition_by_list = get_partition_by_list(column_map)
 
     if write_method == 'overwrite':
