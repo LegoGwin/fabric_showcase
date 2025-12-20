@@ -350,12 +350,14 @@ def write_append(df, target_path, partition_by_list = None):
     writer.save(target_path)
 
 def drop_null_keys(df, key_list):
-    null_pred = reduce(lambda a,b: a | b, (F.col(k).isNull() for k in key_list))
+    if not key_list:
+        return df
+    null_pred = reduce(lambda a, b: a | b, (sql_functions.col(k).isNull() for k in key_list))
     return df.filter(~null_pred)
 
 def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list = None, partition_update = False):
     df = drop_null_keys(df, batch_key_list)
-    
+
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
