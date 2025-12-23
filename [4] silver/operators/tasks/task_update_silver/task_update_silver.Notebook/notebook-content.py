@@ -110,10 +110,10 @@ if full_refresh:
 
 # CELL ********************
 
-def read_bronze_table(source_path, extract_partition, min_extract_partition = None):
+def read_bronze_table(source_path, extract_partition = None, min_extract_partition = None):
     df = spark.read.format('delta').load(source_path)
 
-    if min_extract_partition:
+    if extract_partition and min_extract_partition:
         df = df.filter(sql_functions.col(extract_partition) >= min_extract_partition)
 
     return df
@@ -250,8 +250,8 @@ def get_df_filtered(df, filter_list):
 def apply_latest_keep_ties(df, batch_key_list, order_by_list):
     window_spec = (
         Window
-        .partitionBy(*[sql_functions.col(c) for c in batch_key_list])
-        .orderBy(*[sql_functions.col(c).desc_nulls_last() for c in order_by_list])
+        .partitionBy(*[sql_functions.col(column) for column in batch_key_list])
+        .orderBy(*[sql_functions.col(column).desc_nulls_last() for column in order_by_list])
     )
 
     df = (
@@ -293,8 +293,9 @@ def transform_df(df, schema_json):
     if filter_list:
         df = get_df_filtered(df, filter_list)
 
-    batch_key_list = get_batch_key_list(schema_json)
     order_by_list = get_order_by_list(schema_json)
+    
+    batch_key_list = get_batch_key_list(schema_json)
     if batch_key_list and order_by_list:
         df = apply_latest_keep_ties(df, batch_key_list, order_by_list)
 
@@ -352,7 +353,7 @@ def write_append(df, target_path, partition_by_list = None):
 def drop_null_keys(df, key_list):
     if not key_list:
         return df
-    null_pred = reduce(lambda a, b: a | b, (sql_functions.col(k).isNull() for k in key_list))
+    null_pred = reduce(lambda a, b: a | b, (sql_functions.col(column).isNull() for column in key_list))
     return df.filter(~null_pred)
 
 def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list = None, partition_update = False):
@@ -360,7 +361,7 @@ def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_lis
 
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
-    join_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in batch_key_list])
+    join_condition = " and ".join([f"target.`{column}` = updates.`{column}`" for column in batch_key_list])
 
     if partition_by_list and partition_update:
         partition_filter = get_partition_filter(df, partition_by_list)
@@ -377,7 +378,7 @@ def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_lis
 def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, partition_update = False):
     df = drop_null_keys(df, primary_key_list)
 
-    pk_condition = " and ".join([f"target.`{k}` = updates.`{k}`" for k in primary_key_list])
+    pk_condition = " and ".join([f"target.`{column}` = updates.`{column}`" for column in primary_key_list])
     join_condition = pk_condition
 
     if partition_by_list and partition_update:
