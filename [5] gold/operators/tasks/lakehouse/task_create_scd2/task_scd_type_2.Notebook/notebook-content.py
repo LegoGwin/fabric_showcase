@@ -17,7 +17,7 @@
 # CELL ********************
 
 import json
-import pyspark.sql.functions as F
+import pyspark.sql.functions as sql_functions
 from pyspark.sql import DataFrame
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
@@ -71,53 +71,80 @@ min_date_key = None
 
 # CELL ********************
 
-def get_json_schema(schema):
-    result = json.loads(schema)
+full_refresh = full_refresh.strip().lower() == 'true'
+
+target_path = get_internal_path('abfss', target_path)
+if not DeltaTable.isDeltaTable(spark, target_path):
+    full_refresh = True
+
+source_path = get_internal_path('abfss', source_path)
+
+schema_json = json.loads(schema)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def get_primary_keys(schema_json):
+    result = [column['column_name'] for column in schema_json if column.get('is_primary_key') == 1]
     return result
 
-def get_primary_keys(schema):
-    result = [column['column_name'] for column in schema if column.get('is_primary_key') == 1]
+def get_business_keys(schema_json):
+    result = [column['column_name'] for column in schema_json if column.get('is_business_key') == 1]
     return result
 
-def get_business_keys(schema):
-    result = [column['column_name'] for column in schema if column.get('is_business_key') == 1]
+def validate_meta_data(meta_values, meta_name):
+    if len(meta_values) == 0:
+        raise ValueError(f"Missing meta data for {meta_name}.")
+    if len(meta_values) > 1:
+        raise ValueError(f"More than one column found for {meta_name}. Expected exactly one.")
+    
+def get_meta_value(schema_json, meta_name):
+    meta_values = [column['column_name'] for column in schema_json if column.get(meta_name) == 1]
+    validate_meta_data(meta_values, meta_name)
+    meta_value = meta_values[0]
+
+    return meta_value
+
+def get_date_key(schema_json):
+    result = get_meta_value(schema_json, 'is_date_key')
     return result
 
-def get_date_key(schema):
-    result = [column['column_name'] for column in schema if column.get('is_date_key') == 1][0]
+def get_valid_from(schema_json):
+    result = get_meta_value(schema_json, 'is_valid_from')
     return result
 
-def get_valid_from(schema):
-    result = [column['column_name'] for column in schema if column.get('is_valid_from') == 1][0]
+def get_valid_to(schema_json):
+    result = get_meta_value(schema_json, 'is_valid_to')
     return result
 
-def get_valid_to(schema):
-    result = [column['column_name'] for column in schema if column.get('is_valid_to') == 1][0]
+def get_is_current(schema_json):
+    result = get_meta_value(schema_json, 'is_is_current')
     return result
 
-def get_is_current(schema):
-    result = [column['column_name'] for column in schema if column.get('is_is_current') == 1][0]
+def get_row_hash(schema_json):
+    result = get_meta_value(schema_json, 'is_row_hash')
     return result
 
-def get_row_hash(schema):
-    result = [column['column_name'] for column in schema if column.get('is_row_hash') == 1][0]
+def get_surrogate_key(schema_json):
+    result = get_meta_value(schema_json, 'is_surrogate_key')
     return result
 
-def get_surrogate_key(schema):
-    result = [column['column_name'] for column in schema if column.get('is_surrogate_key') == 1][0]
-    return result
-
-def get_schema_fields(schema):
-    schema = get_json_schema(schema)
+def get_schema_json_fields(schema_json):
     result = (
-        get_primary_keys(schema),
-        get_business_keys(schema),
-        get_date_key(schema),
-        get_valid_from(schema),
-        get_valid_to(schema),
-        get_is_current(schema),
-        get_row_hash(schema),
-        get_surrogate_key(schema)
+        get_primary_keys(schema_json),
+        get_business_keys(schema_json),
+        get_date_key(schema_json),
+        get_valid_from(schema_json),
+        get_valid_to(schema_json),
+        get_is_current(schema_json),
+        get_row_hash(schema_json),
+        get_surrogate_key(schema_json)
     )
     return result
 
@@ -130,18 +157,16 @@ def get_schema_fields(schema):
 
 # CELL ********************
 
-def read_silver_scd2(logical_path, date_key = None, min_date_key = None):
-    abfss_path = get_internal_path('abfss', logical_path)
-    df = spark.read.format('delta').load(abfss_path)
+def read_silver_scd2(source_path, date_key = None, min_date_key = None):
+    df = spark.read.format('delta').load(source_path)
 
     if date_key and min_date_key:
-        df = df.filter(col(date_key) >= min_date_key)
+        df = df.filter(sql_functions.col(date_key) >= min_date_key)
 
     return df
 
-def read_gold_scd2(logical_path):
-    abfss_path = get_internal_path('abfss', logical_path)
-    delta = DeltaTable.forPath(spark, abfss_path)
+def read_gold_scd2(target_path):
+    delta = DeltaTable.forPath(spark, target_path)
 
     return delta
 
@@ -154,15 +179,13 @@ def read_gold_scd2(logical_path):
 
 # CELL ********************
 
-def incremental_scd2(source_path, target_path, schema, min_date_key):
-    primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key = get_schema_fields(schema)
+def incremental_scd2(source_path, target_path, schema_json, min_date_key):
+    primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key = get_schema_json_fields(schema_json)
 
     df_source = read_silver_scd2(source_path, date_key, min_date_key)
-    source_path = get_internal_path('abfs', source_path)
 
     delta_target = read_gold_scd2(target_path)
     df_target = delta_target.toDF()
-    target_path = get_internal_path('abfs', target_path)
 
     df_updates = inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key)
 
@@ -171,22 +194,22 @@ def incremental_scd2(source_path, target_path, schema, min_date_key):
     expire_updated(df_updates, delta_target, primary_keys, valid_to, valid_from, is_current, row_hash)
     expire_deleted(df_updates, delta_target, primary_keys, date_key, is_current, valid_to)
 
-    return df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+    return df_updates.select(sql_functions.max(sql_functions.col(date_key)).alias(date_key)).collect()[0][date_key]
     
 def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key, valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
     # latest batch only
-    max_date_key = df_source.select(F.max(F.col(date_key)).alias("max_dk")).first()["max_dk"]
-    df_updates = df_source.filter(F.col(date_key) == F.lit(max_date_key))
+    max_date_key = df_source.selectsql_functions.max(sql_functions.col(date_key)).alias("max_dk")).first()["max_dk"]
+    df_updates = df_source.filter(sql_functions.col(date_key) == sql_functions.lit(max_date_key))
 
     # SCD2 columns
     df_updates = (
         df_updates
-        .withColumn(valid_from_col, F.lit(max_date_key))
-        .withColumn(valid_to_col, F.lit("9999-12-31").cast("date"))
-        .withColumn(is_current_col, F.lit(True))
+        .withColumn(valid_from_col, sql_functions.lit(max_date_key))
+        .withColumn(valid_to_col, sql_functions.lit("9999-12-31").cast("date"))
+        .withColumn(is_current_col, sql_functions.lit(True))
         .withColumn(
             row_hash_col,
-            F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256),
+            sql_functions.sha2(sql_functions.concat_ws("||", *[sql_functions.col(c).cast("string") for c in business_keys]), 256),
         )
     )
 
@@ -194,7 +217,7 @@ def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, da
     df_target = delta_target.toDF()
     if surrogate_key_col in df_target.columns:
         max_sk = (
-            df_target.select(F.max(F.col(surrogate_key_col)).alias("max_sk"))
+            df_target.select(sql_functions.max(sql_functions.col(surrogate_key_col)).alias("max_sk"))
             .first()["max_sk"]
         )
         max_sk = int(max_sk) if max_sk is not None else 0
@@ -203,8 +226,8 @@ def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, da
         max_sk = 0
 
     # Assign new surrogate keys (deterministic within batch)
-    window = Window.orderBy(*[F.col(c) for c in primary_keys])
-    df_updates = df_updates.withColumn(surrogate_key_col, F.row_number().over(window) + F.lit(max_sk))
+    window = Window.orderBy(*[sql_functions.col(c) for c in primary_keys])
+    df_updates = df_updates.withColumn(surrogate_key_col, sql_functions.row_number().over(window) + sql_functions.lit(max_sk))
 
     return df_updates
 
@@ -249,7 +272,7 @@ def expire_deleted(df_updates, delta_target, primary_keys, date_key, is_current_
     df_expired = df_target.join(df_current_keys, on = primary_keys, how = "left_anti").select(*primary_keys)
 
     if not df_expired.isEmpty():
-        max_date = df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+        max_date = df_updates.select(sql_functions.max(sql_functions.col(date_key)).alias(date_key)).collect()[0][date_key]
         (
             delta_target.alias("target")
                 .merge(
@@ -272,45 +295,44 @@ def expire_deleted(df_updates, delta_target, primary_keys, date_key, is_current_
 
 # CELL ********************
 
-def full_refresh_scd2(source_path, target_path, schema):
-    primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key = get_schema_fields(schema)
+def full_refresh_scd2(source_path, target_path, schema_json):
+    primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key = get_schema_json_fields(schema_json)
 
     df_source = read_silver_scd2(source_path)
-    target_path = get_internal_path('abfss', target_path)
 
     df_updates = fr_prepare_updates(df_source, primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key)
 
     overwrite_target(df_updates, target_path)
 
-    return df_updates.select(F.max(F.col(date_key)).alias(date_key)).collect()[0][date_key]
+    return df_updates.select(sql_functions.max(sql_functions.col(date_key)).alias(date_key)).collect()[0][date_key]
 
 def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, valid_to, is_current, row_hash, surrogate_key):
-    df = df.withColumn(row_hash, F.sha2(F.concat_ws("||", *[F.col(c).cast("string") for c in business_keys]), 256))
+    df = df.withColumn(row_hash, sql_functions.sha2(sql_functions.concat_ws("||", *[sql_functions.col(c).cast("string") for c in business_keys]), 256))
 
     w_ordered = Window.partitionBy(*primary_keys).orderBy(date_key)
-    df = df.withColumn("prev_row_hash", F.lag(row_hash).over(w_ordered))
-    df = df.withColumn("hash_change", F.when(F.col(row_hash) != F.col("prev_row_hash"), 1).otherwise(0))
+    df = df.withColumn("prev_row_hash", sql_functions.lag(row_hash).over(w_ordered))
+    df = df.withColumn("hash_change", sql_functions.when(sql_functions.col(row_hash) != sql_functions.col("prev_row_hash"), 1).otherwise(0))
 
-    df = df.withColumn("group_id", F.sum("hash_change").over(w_ordered.rowsBetween(Window.unboundedPreceding, 0)))
+    df = df.withColumn("group_id", sql_functions.sum("hash_change").over(w_ordered.rowsBetween(Window.unboundedPreceding, 0)))
 
     group_window = Window.partitionBy(*primary_keys, "group_id")
-    df = df.withColumn(valid_from, F.min(date_key).over(group_window))
+    df = df.withColumn(valid_from, sql_functions.min(date_key).over(group_window))
 
     df = df.dropDuplicates(primary_keys + [valid_from, row_hash])
     group_window2 = Window.partitionBy(*primary_keys,).orderBy(valid_from)
     df = df.withColumn(
         valid_to,
-        F.when(
-            F.lead(valid_from).over(group_window2).isNotNull(),
-            F.lead(valid_from).over(group_window2)
-        ).otherwise(F.lit("9999-12-31").cast("date"))
+        sql_functions.when(
+            sql_functions.lead(valid_from).over(group_window2).isNotNull(),
+            sql_functions.lead(valid_from).over(group_window2)
+        ).otherwise(sql_functions.lit("9999-12-31").cast("date"))
     )
     df = df.withColumn(
-        is_current, F.when(F.col(valid_to) == F.lit("9999-12-31").cast("date"), F.lit(True)).otherwise(F.lit(False))
+        is_current, sql_functions.when(sql_functions.col(valid_to) == sql_functions.lit("9999-12-31").cast("date"), sql_functions.lit(True)).otherwise(sql_functions.lit(False))
         )
   
     window = Window.orderBy(*primary_keys)
-    df = df.withColumn(surrogate_key, F.row_number().over(window))
+    df = df.withColumn(surrogate_key, sql_functions.row_number().over(window))
 
     df = df.drop('prev_row_hash', 'hash_change', 'group_id')
 
@@ -318,7 +340,7 @@ def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, va
 
 def overwrite_target(df_updates, target_path):
     df_updates.write \
-        .option('overwriteSchema', 'true') \
+        .option('overwriteschema_json', 'true') \
         .mode('overwrite') \
         .format('delta') \
         .save(target_path)
@@ -332,17 +354,11 @@ def overwrite_target(df_updates, target_path):
 
 # CELL ********************
 
-full_refresh = full_refresh.strip().lower() == 'true'
-
-abfss_path = get_internal_path('abfss', target_path)
-if not DeltaTable.isDeltaTable(spark, abfss_path):
-    full_refresh = True
-
-if full_refresh:
-    max_date_key = full_refresh_scd2(source_path, target_path, schema)
-else:
-    max_date_key = incremental_scd2(source_path, target_path, schema, min_date_key)
-
+def get_max_date_key(source_path, target_path, schema_json, min_date_key):
+    if full_refresh:
+        max_date_key = full_refresh_scd2(source_path, target_path, schema_json)
+    else:
+        max_date_key = incremental_scd2(source_path, target_path, schema_json, min_date_key)
 
 # METADATA ********************
 
@@ -353,7 +369,7 @@ else:
 
 # CELL ********************
 
-mssparkutils.notebook.exit(max_date_key)
+mssparkutils.notebook.exit(source_path, target_path, schema_json, min_date_key)
 
 # METADATA ********************
 
