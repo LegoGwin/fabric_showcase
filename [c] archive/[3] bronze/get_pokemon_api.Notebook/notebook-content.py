@@ -66,6 +66,28 @@ def get_resource_urls(resource):
 
     return urls
 
+def issue_request(url):
+    response = requests.get(url)
+    resp_text = response.text
+
+    return resp_text
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def text_list_to_files(text_list, logical_path, partition_name, partition_format):
+    df = spark.createDataFrame(text_list, StringType())
+    df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
+
+    output_path = get_internal_path('abfss', logical_path)
+    df.write.mode('append').partitionBy(partition_name).text(output_path)
+
 # METADATA ********************
 
 # META {

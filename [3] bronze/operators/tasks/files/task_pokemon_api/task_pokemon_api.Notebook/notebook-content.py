@@ -16,6 +16,8 @@
 
 # CELL ********************
 
+import requests
+import json
 from pyspark.sql.types import StringType
 from pyspark.sql.functions import current_timestamp, date_format
 
@@ -37,9 +39,12 @@ from pyspark.sql.functions import current_timestamp, date_format
 # META   "language_group": "synapse_pyspark"
 # META }
 
-# CELL ********************
+# PARAMETERS CELL ********************
 
-%run extract_pokemon_api
+target_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/item'
+resource = 'berry'
+partition_name = 'partition'
+partition_format = 'yyyyMMddHHmmss'
 
 # METADATA ********************
 
@@ -48,12 +53,48 @@ from pyspark.sql.functions import current_timestamp, date_format
 # META   "language_group": "synapse_pyspark"
 # META }
 
-# PARAMETERS CELL ********************
+# CELL ********************
 
-target_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/item'
-resource = 'item'
-partition_name = 'partition'
-partition_format = 'yyyyMMddHHmmss'
+target_path = get_internal_path('abfss', target_path)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+base_url = 'https://pokeapi.co/api/v2'
+
+def issue_request(url):
+    response = requests.get(url)
+    resp_text = response.text
+
+    return resp_text
+
+def get_resource_urls(resource):
+    urls = []
+
+    items_url = f'{base_url}/{resource}?offset=0&limit=100'
+    while items_url != None:
+        resp_text = issue_request(items_url)
+        resp_json = json.loads(resp_text)
+        items_url = resp_json['next']
+        urls.extend(item['url'] for item in resp_json['results'])
+
+    return urls
+
+def extract_pokemon_api(resource):
+    results = []
+    urls = get_resource_urls(resource)
+    
+    for url in urls:
+        result = issue_request(url)
+        results.append(result)
+
+    return result
 
 # METADATA ********************
 
@@ -75,12 +116,11 @@ text_list = extract_pokemon_api(resource)
 
 # CELL ********************
 
-def text_list_to_files(text_list, logical_path, partition_name, partition_format):
+def text_list_to_files(text_list, target_path, partition_name, partition_format):
     df = spark.createDataFrame(text_list, StringType())
     df = df.withColumn(partition_name, date_format(current_timestamp(), partition_format))
 
-    output_path = get_internal_path('abfss', logical_path)
-    df.write.mode('append').partitionBy(partition_name).text(output_path)
+    df.write.mode('append').partitionBy(partition_name).text(target_path)
 
 # METADATA ********************
 

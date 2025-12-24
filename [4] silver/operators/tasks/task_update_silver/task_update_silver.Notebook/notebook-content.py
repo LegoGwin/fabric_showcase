@@ -147,13 +147,13 @@ def get_magic_expr(expression):
     name_regex = r"^#\w+\(([^)]+)\)$"
     name_match = re.match(name_regex, expr)
     if not name_match:
-        raise ValueError(f"Invalid magic expression: {expr!r}. Expected format like #func(col), e.g. #datetime1(order_dt)")
+        raise ValueError(f"Invalid magic expression: {expr}. Expected format like #func(col), e.g. #datetime1(order_dt)")
     source_name = name_match.group(1).strip()
 
     func_regex = r"^#([^()]+)\("
     func_match = re.match(func_regex, expr)
     if not func_match:
-        raise ValueError(f"Invalid magic expression: {expr!r}. Could not parse function name. Expected format like #func(col).")
+        raise ValueError(f"Invalid magic expression: {expr}. Could not parse function name. Expected format like #func(col).")
     function = func_match.group(1).strip()
 
     if function == "datetime1":
