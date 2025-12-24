@@ -18,7 +18,7 @@
 
 import re
 import json
-from pyspark.sql.functions import col, posexplode_outer, max
+from pyspark.sql.functions import col, posexplode_outer, max, lit
 from pyspark.sql.types import ArrayType, StructType, MapType
 from delta.tables import DeltaTable
 
@@ -90,7 +90,7 @@ def read_json_files(source_path, multi_line, partition_name, min_partition):
         .json(source_path)
 
     if min_partition:
-        df = df.filter(f'{partition_name} >= {min_partition}')
+        df = df.filter(col(partition_name) >= lit(min_partition))
     
     return df
 
