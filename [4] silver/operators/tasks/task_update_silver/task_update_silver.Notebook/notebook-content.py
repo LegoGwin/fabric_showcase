@@ -403,7 +403,7 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
         return None
 
     if len(partition_df) > max_partitions:
-        raise ValueError(f"Too many distinct partitions (> {max_partitions}). Check partition_by_list/metadata.")
+        raise ValueError(f"Too many distinct partitions: {max_partitions}). Check partition_by_list metadata.")
 
     partition_disjunctions = []
 
