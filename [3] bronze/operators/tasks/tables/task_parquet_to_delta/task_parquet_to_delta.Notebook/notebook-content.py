@@ -45,7 +45,7 @@ target_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 source_path = 'lakefiles:fabric_showcase/bronze_lakehouse/files/pokemon/berry'
 partition_name = 'partition'
 min_partition = '20250512141514'
-full_refresh = 'false'
+full_refresh = 'true'
 
 # METADATA ********************
 
@@ -58,8 +58,10 @@ full_refresh = 'false'
 
 full_refresh = full_refresh.strip().lower() == 'true'
 
-abfss_path = get_internal_path('abfss', target_path)
-if not DeltaTable.isDeltaTable(spark, abfss_path):
+source_path = get_internal_path('abfss', source_path)
+
+target_path = get_internal_path('abfss', target_path)
+if not DeltaTable.isDeltaTable(spark, target_path):
     full_refresh = True
 elif min_partition is None:
     full_refresh = True
@@ -76,12 +78,10 @@ if full_refresh:
 
 # CELL ********************
 
-def read_parquet_files(logical_path, partition_name, min_partition):
-    abfss_path = get_internal_path('abfss', logical_path)
-
+def read_parquet_files(source_path, partition_name, min_partition):
     df = spark.read \
         .option('mergeSchema', 'true') \
-        .parquet(abfss_path)
+        .parquet(source_path)
 
     if min_partition:
         df = df.filter(f'{partition_name} >= {min_partition}')
@@ -145,11 +145,9 @@ df = format_columns(df)
 
 # CELL ********************
 
-def get_column_order(df, logical_path):
-    abfss_path = get_internal_path('abfss', logical_path)
-
-    if DeltaTable.isDeltaTable(spark, abfss_path):
-        target_schema = spark.read.format('delta').load(abfss_path).schema
+def get_column_order(df, target_path):
+    if DeltaTable.isDeltaTable(spark, target_path):
+        target_schema = spark.read.format('delta').load(target_path).schema
         target_columns = [f'`{field.name}`' for field in target_schema]
     else:
         target_columns = []
@@ -163,10 +161,8 @@ def get_column_order(df, logical_path):
 
     return column_order
 
-def dataframe_to_table(df, logical_path, partition_name, full_refresh):
-    abfss_path = get_internal_path('abfss', logical_path)
-
-    column_order = get_column_order(df, logical_path)
+def dataframe_to_table(df, target_path, partition_name, full_refresh):
+    column_order = get_column_order(df, target_path)
     df = df.select(*column_order)
     
     if full_refresh:

@@ -48,8 +48,8 @@ flatten_mode = 'recursive'
 flatten_settings = '[]'
 multi_line = 'false'
 partition_name = 'partition'
-min_partition = '20250805134337'
 full_refresh = 'false'
+min_partition = '20250805134337'
 
 # METADATA ********************
 
@@ -60,10 +60,12 @@ full_refresh = 'false'
 
 # CELL ********************
 
-full_refresh = full_refresh.strip().lower() == 'true'
+target_path = get_internal_path('abfss', target_path)
 
-abfss_path = get_internal_path('abfss', target_path)
-if not DeltaTable.isDeltaTable(spark, abfss_path):
+source_path = get_internal_path('abfss', source_path)
+
+full_refresh = full_refresh.strip().lower() == 'true'
+if not DeltaTable.isDeltaTable(spark, target_path):
     full_refresh = True
 elif min_partition is None:
     full_refresh = True
@@ -80,14 +82,12 @@ if full_refresh:
 
 # CELL ********************
 
-def read_json_files(logical_path, multi_line, partition_name, min_partition):
-    abfss_path = get_internal_path('abfss', logical_path)
-
+def read_json_files(source_path, multi_line, partition_name, min_partition):
     df = spark.read \
         .option('primitivesAsString', 'true') \
         .option('samplingRatio', 1) \
         .option('multiLine', multi_line) \
-        .json(abfss_path)
+        .json(source_path)
 
     if min_partition:
         df = df.filter(f'{partition_name} >= {min_partition}')
@@ -200,11 +200,9 @@ df = transform_json(df, flatten_mode, flatten_settings)
 
 # CELL ********************
 
-def get_column_order(df, logical_path):
-    abfss_path = get_internal_path('abfss', logical_path)
-
-    if DeltaTable.isDeltaTable(spark, abfss_path):
-        target_schema = spark.read.format('delta').load(abfss_path).schema
+def get_column_order(df, target_path):
+    if DeltaTable.isDeltaTable(spark, target_path):
+        target_schema = spark.read.format('delta').load(target_path).schema
         target_columns = [f'`{field.name}`' for field in target_schema]
     else:
         target_columns = []
@@ -218,10 +216,8 @@ def get_column_order(df, logical_path):
 
     return column_order
 
-def dataframe_to_table(df, logical_path, partition_name, full_refresh):
-    abfss_path = get_internal_path('abfss', logical_path)
-
-    column_order = get_column_order(df, logical_path)
+def dataframe_to_table(df, target_path, partition_name, full_refresh):
+    column_order = get_column_order(df, target_path)
     df = df.select(*column_order)
     
     if full_refresh:
@@ -230,14 +226,14 @@ def dataframe_to_table(df, logical_path, partition_name, full_refresh):
             .option('overwriteSchema', 'true') \
             .partitionBy(partition_name) \
             .format('delta') \
-            .save(abfss_path)
+            .save(target_path)
     else:
         df.write \
             .mode('append') \
             .option('mergeSchema', 'true') \
             .partitionBy(partition_name) \
             .format('delta') \
-            .save(abfss_path)
+            .save(target_path)
 
 # METADATA ********************
 
