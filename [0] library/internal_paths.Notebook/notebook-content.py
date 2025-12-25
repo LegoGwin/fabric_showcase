@@ -87,9 +87,11 @@ def get_lakefiles_path(path_format, logical_path):
         default_root = '/lakehouse/default/Files/'
     elif path_format == 'relative':
         default_root = 'Files/'
-    else:
+    elif path_format == 'abfss':
         default_root = f"abfss://{split_path['workspace']}@onelake.dfs.fabric.microsoft.com/{split_path['lakehouse']}.Lakehouse/Files/"
-
+    else:
+        raise ValueError('Unrecognized path format for lakefiles path.')
+        
     file_path = os.path.join(default_root, split_path['directory'])
 
     return file_path
@@ -114,10 +116,12 @@ def get_deltalake_path(path_format, logical_path):
     elif path_format == 'relative':
         default_root = 'Tables/'
         target_path = os.path.join(default_root, split_path['schema'], split_path['table_name'])
-    else:
+    elif path_format == 'abfss'
         default_root = f"abfss://{split_path['workspace']}@onelake.dfs.fabric.microsoft.com/{split_path['lakehouse']}.Lakehouse/Tables/"
         target_path = os.path.join(default_root, split_path['schema'], split_path['table_name'])
-
+    else:
+        raise ValueError('Unrecognized path format for deltalake path')
+        
     return target_path
 
 # METADATA ********************
@@ -137,7 +141,9 @@ def get_lakehouse_path(path_format, logical_path):
         result = get_lakefiles_path(path_format, logical_path)
     elif path_type == 'deltalake':
         result = get_deltalake_path(path_format, logical_path)
-
+    else:
+        raise ValueError('Unrecognized path format.')
+        
     return result
 
 # METADATA ********************
@@ -200,7 +206,7 @@ def get_internal_path(path_format, logical_path):
     elif path_type == 'eventhouse':
         result = get_eventhouse_path(path_format, logical_path)
     else:
-        result = None
+        raise ValueError('Unrecognized path type.')
 
     return result
 
