@@ -58,15 +58,11 @@ def split_logical_path(logical_path):
             'table_name':   components[3]
         }
     elif path_type == 'database':
-        result = {
-            path_type: 'database'
-        }
+        raise NotImplementedError('Database path type not currently implemented.')
     elif path_type == 'eventhouse':
-        result = {
-            path_type: 'eventhouse'
-        }
+        raise NotImplementedError('Eventhouse path type not currently implemented.')
     else:
-        result = None
+        raise ValueError('Unrecognized path type.')
 
     return result
 
@@ -90,8 +86,8 @@ def get_lakefiles_path(path_format, logical_path):
     elif path_format == 'abfss':
         default_root = f"abfss://{split_path['workspace']}@onelake.dfs.fabric.microsoft.com/{split_path['lakehouse']}.Lakehouse/Files/"
     else:
-        raise ValueError('Unrecognized path format for lakefiles path.')
-        
+        raise ValueError('Unrecognized path format.')
+
     file_path = os.path.join(default_root, split_path['directory'])
 
     return file_path
@@ -116,12 +112,12 @@ def get_deltalake_path(path_format, logical_path):
     elif path_format == 'relative':
         default_root = 'Tables/'
         target_path = os.path.join(default_root, split_path['schema'], split_path['table_name'])
-    elif path_format == 'abfss'
+    elif path_format == 'abfss':
         default_root = f"abfss://{split_path['workspace']}@onelake.dfs.fabric.microsoft.com/{split_path['lakehouse']}.Lakehouse/Tables/"
         target_path = os.path.join(default_root, split_path['schema'], split_path['table_name'])
     else:
-        raise ValueError('Unrecognized path format for deltalake path')
-        
+        raise ValueError('Unrecognized path format.')
+
     return target_path
 
 # METADATA ********************
@@ -133,30 +129,8 @@ def get_deltalake_path(path_format, logical_path):
 
 # CELL ********************
 
-def get_lakehouse_path(path_format, logical_path):
-    split_path = split_logical_path(logical_path)
-    path_type = split_path['path_type']
-
-    if path_type == 'lakefiles':
-        result = get_lakefiles_path(path_format, logical_path)
-    elif path_type == 'deltalake':
-        result = get_deltalake_path(path_format, logical_path)
-    else:
-        raise ValueError('Unrecognized path format.')
-        
-    return result
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 def get_warehouse_path(path_format, logical_path):
-    return None
+    raise NotImplementedError('Warehouse path type not currently implemented.')
 
 # METADATA ********************
 
@@ -168,7 +142,7 @@ def get_warehouse_path(path_format, logical_path):
 # CELL ********************
 
 def get_database_path(path_format, logical_path):
-    return None
+    raise NotImplementedError('Database path type not currently implemented.')
 
 # METADATA ********************
 
@@ -180,7 +154,7 @@ def get_database_path(path_format, logical_path):
 # CELL ********************
 
 def get_eventhouse_path(path_format, logical_path):
-    return None
+    raise NotImplementedError('Eventhouse path type not currently implemented.')
 
 # METADATA ********************
 
@@ -196,9 +170,9 @@ def get_internal_path(path_format, logical_path):
     path_type = split_path['path_type']
 
     if path_type == 'lakefiles':
-        result = get_lakehouse_path(path_format, logical_path)
+        result = get_lakefiles_path(path_format, logical_path)
     elif path_type == 'deltalake':
-        result = get_lakehouse_path(path_format, logical_path)
+        result = get_deltalake_path(path_format, logical_path)
     elif path_type == 'warehouse':
         result = get_warehouse_path(path_format, logical_path)
     elif path_type == 'database':
