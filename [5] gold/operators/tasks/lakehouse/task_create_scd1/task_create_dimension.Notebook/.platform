@@ -1,11 +1,12 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
   "metadata": {
-    "type": "DataPipeline",
-    "displayName": "task_create_dimension"
+    "type": "Notebook",
+    "displayName": "task_create_scd1",
+    "description": "New notebook"
   },
   "config": {
     "version": "2.0",
-    "logicalId": "ae25d4dd-1734-b70c-465a-06c205fa4b2b"
+    "logicalId": "3154447e-5073-8831-46e2-5e5f39d27e7d"
   }
 }
