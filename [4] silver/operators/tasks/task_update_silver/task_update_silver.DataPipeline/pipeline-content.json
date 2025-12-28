@@ -28,9 +28,9 @@
               },
               "type": "string"
             },
-            "partition_update": {
+            "partitions_immutable": {
               "value": {
-                "value": "@coalesce(\n    pipeline().parameters.partition_update,\n    activity('lookup_meta_data').output.value[0].partition_update\n)",
+                "value": "@coalesce(\n    pipeline().parameters.partitions_immutable,\n    activity('lookup_meta_data').output.value[0].partition_update\n)",
                 "type": "Expression"
               },
               "type": "string"
@@ -300,7 +300,7 @@
       "write_method": {
         "type": "string"
       },
-      "partition_update": {
+      "partitions_immutable": {
         "type": "string"
       },
       "full_refresh": {

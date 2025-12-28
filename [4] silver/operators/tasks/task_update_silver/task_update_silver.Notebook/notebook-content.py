@@ -45,10 +45,10 @@ from pyspark.sql.types import BooleanType
 
 # PARAMETERS CELL ********************
 
-target_path = "deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry"
+target_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry'
 source_path = 'deltalake:fabric_showcase/bronze_lakehouse/tables/pokemon/berry'
 write_method = 'overwrite'
-partition_update = 'true'
+partitions_immutable = 'true'
 schema = """
     [
         {"expression":"id","column_type":"int","column_name":"Id","column_order":1,"is_filter":0,"is_primary_key":1,"is_batch_key":0,"is_order_by":0,"is_output":1,"is_partition_by":0},
@@ -86,7 +86,7 @@ full_refresh = 'false'
 
 schema_json = json.loads(schema)
 
-partition_update = partition_update.strip().lower() == 'true'
+partitions_immutable = partitions_immutable.strip().lower() == 'true'
 full_refresh = full_refresh.strip().lower() == 'true'
 
 source_path = get_internal_path('abfss', source_path)
@@ -208,7 +208,7 @@ def get_order_by_list(schema_json):
     return result
 
 def get_output_list(schema_json):
-    result = [column['column_name'] for column in schema_json if column.get('is_output') == 1]
+    result = [f"`{column['column_name']}`" for column in schema_json if column.get('is_output') == 1]
     return result
 
 def get_partition_by_list(schema_json):
@@ -354,16 +354,19 @@ def drop_null_keys(df, key_list):
     if not key_list:
         return df
     null_pred = reduce(lambda a, b: a | b, (sql_functions.col(column).isNull() for column in key_list))
-    return df.filter(~null_pred)
 
-def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list = None, partition_update = False):
+    df = df.filter(~null_pred)
+    
+    return df
+
+def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list = None, partitions_immutable = False):
     df = drop_null_keys(df, batch_key_list)
 
     df_batch = df.select(*batch_key_list).dropDuplicates(batch_key_list)
 
     join_condition = " and ".join([f"target.`{column}` = updates.`{column}`" for column in batch_key_list])
 
-    if partition_by_list and partition_update:
+    if partition_by_list and partitions_immutable:
         partition_filter = get_partition_filter(df, partition_by_list)
         if partition_filter:
             join_condition = f"({join_condition} and {partition_filter})"
@@ -375,13 +378,13 @@ def write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_lis
 
     write_append(df, target_path, partition_by_list)
 
-def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, partition_update = False):
+def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, partitions_immutable = False):
     df = drop_null_keys(df, primary_key_list)
 
     pk_condition = " and ".join([f"target.`{column}` = updates.`{column}`" for column in primary_key_list])
     join_condition = pk_condition
 
-    if partition_by_list and partition_update:
+    if partition_by_list and partitions_immutable:
         partition_filter = get_partition_filter(df, partition_by_list)
         if partition_filter:
             join_condition = f"({pk_condition} and {partition_filter})"
@@ -403,7 +406,7 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
         return None
 
     if len(partition_df) > max_partitions:
-        raise ValueError(f"Too many distinct partitions: {max_partitions}). Check partition_by_list metadata.")
+        raise ValueError(f"Too many distinct partitions: {max_partitions}. Check partition_by_list metadata.")
 
     partition_disjunctions = []
 
@@ -431,7 +434,7 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
 
     return result 
 
-def write_to_silver(df, target_path, schema_json, write_method, partition_update):
+def write_to_silver(df, target_path, schema_json, write_method, partitions_immutable):
     partition_by_list = get_partition_by_list(schema_json)
 
     if write_method == 'overwrite':
@@ -439,13 +442,13 @@ def write_to_silver(df, target_path, schema_json, write_method, partition_update
     elif write_method == 'bk_merge':
         batch_key_list = get_batch_key_list(schema_json)
         if batch_key_list:
-            write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partition_update)
+            write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partitions_immutable)
         else:
             raise ValueError('Batch key list is empty.')
     elif write_method == 'pk_merge':
         primary_key_list = get_primary_key_list(schema_json)
         if primary_key_list:
-            write_pk_merge(df, target_path, primary_key_list, partition_by_list, partition_update)
+            write_pk_merge(df, target_path, primary_key_list, partition_by_list, partitions_immutable)
         else:
             raise ValueError('Primary key list is empty.')
     elif write_method == 'append':
@@ -462,7 +465,7 @@ def write_to_silver(df, target_path, schema_json, write_method, partition_update
 
 # CELL ********************
 
-write_to_silver(df, target_path, schema_json, write_method, partition_update)
+write_to_silver(df, target_path, schema_json, write_method, partitions_immutable)
 
 # METADATA ********************
 
