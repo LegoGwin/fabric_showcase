@@ -153,7 +153,9 @@ def clean_df_source(source_path, business_key_list, order_by_list = None):
 # CELL ********************
 
 df_source = clean_df_source(source_path, business_key_list, order_by_list)
-df_target = spark.read.format('delta').load(target_path)
+
+if not full_refresh:
+    df_target = spark.read.format('delta').load(target_path)
 
 # METADATA ********************
 
@@ -167,14 +169,11 @@ df_target = spark.read.format('delta').load(target_path)
 def get_new_records(df_source, df_target, business_key_list, sk_column, order_by_list = None):
     df_updates = df_source.join(df_target, on = business_key_list, how = 'left_anti')
 
-    if not df_target:
-        max_sk_value = 0
-    else:
-        max_sk_value = (
-            df_target
-            .agg(sql_functions.max(sql_functions.col(sk_column)).alias("max_sk"))
-            .first()["max_sk"]
-        )
+    max_sk_value = (
+        df_target.agg(sql_functions.max(sql_functions.col(sk_column)).alias("max_sk"))
+                .first()["max_sk"]
+    )
+    max_sk_value = 0 if max_sk_value is None else int(max_sk_value)
  
     window_spec = Window.orderBy(*[sql_functions.col(column).asc_nulls_last() for column in business_key_list])
     df_updates = df_updates.withColumn(sk_column, sql_functions.row_number().over(window_spec) + sql_functions.lit(max_sk_value))
@@ -217,11 +216,11 @@ def update_scd1(df_source, df_target, target_path, business_key_list, sk_column,
 
 # CELL ********************
 
-def rebuild_scd1(df, business_key_list, sk_column, order_by_list = None, sk_start=1):
+def rebuild_scd1(df, business_key_list, sk_column, order_by_list = None):
     if not business_key_list:
         raise ValueError("business_key_list must be non-empty.")
 
-    df0 = df.dropna(subset=business_key_list)
+    df0 = df.dropna(subset = business_key_list)
 
     if not order_by_list:
         # Assert uniqueness: if more than 1 row per key, we refuse to guess
@@ -251,7 +250,7 @@ def rebuild_scd1(df, business_key_list, sk_column, order_by_list = None, sk_star
 
     # Deterministic SK assignment for this rebuild
     w_sk = Window.orderBy(*[sql_functions.col(c).asc_nulls_last() for c in business_key_list])
-    df_dim = df_dim.withColumn(sk_column, sql_functions.row_number().over(w_sk) + (sql_functions.lit(int(sk_start)) - 1))
+    df_dim = df_dim.withColumn(sk_column, sql_functions.row_number().over(w_sk))
 
     return df_dim
 
