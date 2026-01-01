@@ -46,6 +46,8 @@ schema = """
     ]
     """
 full_refresh = 'false'
+min_partition = None
+partition_column = None
 
 # METADATA ********************
 
@@ -64,6 +66,11 @@ schema_json = json.loads(schema)
 full_refresh = full_refresh.strip().lower() == 'true'
 if not DeltaTable.isDeltaTable(spark, target_path):
     full_refresh = True
+
+if full_refresh:
+    min_partition = None
+    partition_column = None
+
 
 # METADATA ********************
 
@@ -121,9 +128,12 @@ sk_column = get_sk_column(schema_json)
 
 # CELL ********************
 
-def clean_df_source(source_path, business_key_list, order_by_list = None):
+def clean_df_source(source_path, business_key_list, order_by_list = None, partition_column = None, min_partition = None):
     df_source = spark.read.format('delta').load(source_path)
     
+    if partition_column and min_partition:
+        df_source.filter(sql_functions.col(partition_column) >= min_partition)
+
     df_source = df_source.dropna(subset = business_key_list)
 
     if order_by_list:
@@ -143,6 +153,14 @@ def clean_df_source(source_path, business_key_list, order_by_list = None):
 
     return df_source
 
+def clean_df_target(target_path, full_refresh):
+    if not full_refresh:
+        df_target = spark.read.format('delta').load(target_path)
+    else:
+        df_target = None
+
+    return df_target
+
 # METADATA ********************
 
 # META {
@@ -153,9 +171,7 @@ def clean_df_source(source_path, business_key_list, order_by_list = None):
 # CELL ********************
 
 df_source = clean_df_source(source_path, business_key_list, order_by_list)
-
-if not full_refresh:
-    df_target = spark.read.format('delta').load(target_path)
+df_target = clean_df_target(target_path, full_refresh)
 
 # METADATA ********************
 
@@ -216,7 +232,7 @@ def update_scd1(df_source, df_target, target_path, business_key_list, sk_column,
 
 # CELL ********************
 
-def rebuild_scd1(df, business_key_list, sk_column, order_by_list = None):
+def get_full_refresh_df(df, business_key_list, sk_column, order_by_list = None):
     if not business_key_list:
         raise ValueError("business_key_list must be non-empty.")
 
@@ -236,6 +252,8 @@ def rebuild_scd1(df, business_key_list, sk_column, order_by_list = None):
                 "Found duplicate rows per business key but no order_by_list was provided. "
                 "Provide an ordering column (e.g., updated_at/extract_tstamp) or a deterministic tie-breaker."
             )
+        else:
+            df_dim = df0
     else:
         # Pick the “latest” row per business key deterministically
         w_pick = (
@@ -254,6 +272,9 @@ def rebuild_scd1(df, business_key_list, sk_column, order_by_list = None):
 
     return df_dim
 
+def rebuild_scd1():
+    df = get_full_refresh_df(df_source, business_key_list, sk_column, order_by_list)
+    df.write.format('delta').mode('overwrite').option('overwriteSchema', 'true').save(target_path)
 
 # METADATA ********************
 
@@ -268,6 +289,34 @@ if full_refresh:
     rebuild_scd1(df_source, business_key_list, sk_column, order_by_list)
 else:
     update_scd1(df_source, df_target, target_path, business_key_list, sk_column, order_by_list)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def get_max_partition(df, partition_column):
+    if partition_column:
+        max_partition = df.agg(sql_functions.max(sql_functions.col(partition_column)).alias('max_partition').first()['max_partition'])
+    else:
+        max_partition = None
+
+    return max_partition
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+mssparkutils.exitValue(get_max_partition(df_source, partition_column))
 
 # METADATA ********************
 
