@@ -83,7 +83,9 @@ if full_refresh:
 
 def get_business_key_list(schema_json):
     result = [column['column_name'] for column in schema_json if column.get('is_business_key') == 1]
-    
+    if result is None:
+        raise ValueError('business_key_list must not be empty.')
+        
     return result
 
 def get_order_by_list(schema_json):
@@ -132,7 +134,7 @@ def clean_df_source(source_path, business_key_list, order_by_list = None, partit
     df_source = spark.read.format('delta').load(source_path)
     
     if partition_column and min_partition:
-        df_source.filter(sql_functions.col(partition_column) >= min_partition)
+        df_source = df_source.filter(sql_functions.col(partition_column) >= min_partition)
 
     df_source = df_source.dropna(subset = business_key_list)
 
@@ -182,7 +184,7 @@ df_target = clean_df_target(target_path, full_refresh)
 
 # CELL ********************
 
-def get_new_records(df_source, df_target, business_key_list, sk_column, order_by_list = None):
+def get_new_records(df_source, df_target, business_key_list, sk_column):
     df_updates = df_source.join(df_target, on = business_key_list, how = 'left_anti')
 
     max_sk_value = (
@@ -196,32 +198,30 @@ def get_new_records(df_source, df_target, business_key_list, sk_column, order_by
 
     return df_updates
 
-def update_existing_records(df_source, target_path, business_key_list, sk_column):
-    join_condition = " AND ".join([f"target.`{c}` = updates.`{c}`" for c in business_key_list])
+def get_existing_records(df_source, df_target, business_key_list, sk_column):
+    df_existing = df_source.join(df_target, on = business_key_list, how = 'left_semi')
+    df_existing = df_existing.withColumn(sk_column, sql_functions.lit(None))
 
-    # update matched rows but DO NOT overwrite surrogate key
-    update_cols = [c for c in df_source.columns if c != sk_column]
-    set_expr = {c: f"updates.`{c}`" for c in update_cols}
+    return df_existing
+
+def update_scd1(df_source, df_target, target_path, business_key_list, sk_column):
+    df_new = get_new_records(df_source, df_target, business_key_list, sk_column)
+    df_existing = get_existing_records(df_source, df_target, business_key_list, sk_column)
+
+    df = df_existing.unionByName(df_new)
+    join_condition = " and ".join([f"target.`{column}` = updates.`{column}`" for column in business_key_list])
+
+    update_cols = [column for column in df_source.columns if column != sk_column]
+    set_expr = {column: f"updates.`{column}`" for column in update_cols}
 
     (
         DeltaTable.forPath(spark, target_path)
         .alias("target")
-        .merge(df_source.alias("updates"), join_condition)
+        .merge(df.alias("updates"), join_condition)
         .whenMatchedUpdate(set = set_expr)
+        .whenNotMatchedInsertAll()
         .execute()
     )
-
-def update_scd1(df_source, df_target, target_path, business_key_list, sk_column, order_by_list = None):
-    if not business_key_list:
-        raise ValueError("business_key_list must be a non-empty list")
-
-    update_existing_records(df_source, target_path, business_key_list, sk_column)
-
-    # append truly new rows with generated surrogate keys
-    df_new_records = get_new_records(df_source, df_target, business_key_list, sk_column, order_by_list)
-
-    df_new_records.write.format("delta").mode("append").save(target_path)
-
 
 # METADATA ********************
 
@@ -233,9 +233,6 @@ def update_scd1(df_source, df_target, target_path, business_key_list, sk_column,
 # CELL ********************
 
 def get_full_refresh_df(df, business_key_list, sk_column, order_by_list = None):
-    if not business_key_list:
-        raise ValueError("business_key_list must be non-empty.")
-
     df0 = df.dropna(subset = business_key_list)
 
     if not order_by_list:
@@ -272,7 +269,7 @@ def get_full_refresh_df(df, business_key_list, sk_column, order_by_list = None):
 
     return df_dim
 
-def rebuild_scd1():
+def rebuild_scd1(df_source, target_path, business_key_list, sk_column, order_by_list):
     df = get_full_refresh_df(df_source, business_key_list, sk_column, order_by_list)
     df.write.format('delta').mode('overwrite').option('overwriteSchema', 'true').save(target_path)
 
@@ -286,9 +283,9 @@ def rebuild_scd1():
 # CELL ********************
 
 if full_refresh:
-    rebuild_scd1(df_source, business_key_list, sk_column, order_by_list)
+    rebuild_scd1(df_source, target_path, business_key_list, sk_column, order_by_list)
 else:
-    update_scd1(df_source, df_target, target_path, business_key_list, sk_column, order_by_list)
+    update_scd1(df_source, df_target, target_path, business_key_list, sk_column)
 
 # METADATA ********************
 
@@ -301,7 +298,7 @@ else:
 
 def get_max_partition(df, partition_column):
     if partition_column:
-        max_partition = df.agg(sql_functions.max(sql_functions.col(partition_column)).alias('max_partition').first()['max_partition'])
+        max_partition = df.agg(sql_functions.max(sql_functions.col(partition_column)).alias('max_partition')).first()['max_partition']
     else:
         max_partition = None
 
