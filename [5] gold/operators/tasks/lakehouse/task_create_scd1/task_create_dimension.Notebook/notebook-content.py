@@ -83,9 +83,9 @@ if full_refresh:
 
 def get_business_key_list(schema_json):
     result = [column['column_name'] for column in schema_json if column.get('is_business_key') == 1]
-    if result is None:
+    if not result:
         raise ValueError('business_key_list must not be empty.')
-        
+
     return result
 
 def get_order_by_list(schema_json):
