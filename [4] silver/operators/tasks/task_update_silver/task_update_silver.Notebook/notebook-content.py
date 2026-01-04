@@ -110,34 +110,6 @@ if full_refresh:
 
 # CELL ********************
 
-def read_bronze_table(source_path, extract_partition = None, min_extract_partition = None):
-    df = spark.read.format('delta').load(source_path)
-
-    if extract_partition and min_extract_partition:
-        df = df.filter(sql_functions.col(extract_partition) >= min_extract_partition)
-
-    return df
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-df_source = read_bronze_table(source_path, extract_partition, min_extract_partition)
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
 def get_magic_expr(expression):
     if expression is None:
         raise ValueError("Invalid magic expression: None. Expected format like #func(col), e.g. #datetime1(order_dt).")
@@ -226,6 +198,51 @@ def get_partition_by_list(schema_json):
 
 # CELL ********************
 
+select_list = get_select_list(schema_json)
+filter_list = get_filter_list(schema_json)
+primary_key_list = get_primary_key_list(schema_json)
+batch_key_list = get_batch_key_list(schema_json)
+order_by_list = get_order_by_list(schema_json)
+output_list = get_output_list(schema_json)
+partition_by_list = get_partition_by_list(schema_json)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+def read_bronze_table(source_path, extract_partition = None, min_extract_partition = None):
+    df = spark.read.format('delta').load(source_path)
+
+    if extract_partition and min_extract_partition:
+        df = df.filter(sql_functions.col(extract_partition) >= min_extract_partition)
+
+    return df
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+df_source = read_bronze_table(source_path, extract_partition, min_extract_partition)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
 def get_df_selected(df, select_list):
     df = df.selectExpr(*select_list)
     return df
@@ -285,25 +302,18 @@ def get_df_outputs(df, output_list):
     df = df.selectExpr(*output_list)
     return df
 
-def transform_df(df, schema_json):
-    select_list = get_select_list(schema_json)
+def transform_df(df, select_list, filter_list, order_by_list, batch_key_list, primary_key_list, output_list):
     df = get_df_selected(df, select_list)
 
-    filter_list = get_filter_list(schema_json)
     if filter_list:
         df = get_df_filtered(df, filter_list)
-
-    order_by_list = get_order_by_list(schema_json)
     
-    batch_key_list = get_batch_key_list(schema_json)
     if batch_key_list and order_by_list:
         df = apply_latest_keep_ties(df, batch_key_list, order_by_list)
 
-    primary_key_list = get_primary_key_list(schema_json)
     if primary_key_list:
         df = apply_latest_break_ties(df, primary_key_list, order_by_list)
     
-    output_list = get_output_list(schema_json)
     df = get_df_outputs(df, output_list)
 
     return df
@@ -317,7 +327,7 @@ def transform_df(df, schema_json):
 
 # CELL ********************
 
-df = transform_df(df_source, schema_json)
+df = transform_df(df_source, select_list, filter_list, order_by_list, batch_key_list, primary_key_list, output_list)
 
 # METADATA ********************
 
@@ -434,19 +444,15 @@ def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_pr
 
     return result 
 
-def write_to_silver(df, target_path, schema_json, write_method, partitions_immutable):
-    partition_by_list = get_partition_by_list(schema_json)
-
+def write_to_silver(df, target_path, partition_by_list, batch_key_list, primary_key_list, write_method, partitions_immutable):
     if write_method == 'overwrite':
         write_overwrite(df, target_path, partition_by_list)
     elif write_method == 'bk_merge':
-        batch_key_list = get_batch_key_list(schema_json)
         if batch_key_list:
             write_rebuild_by_batch_key(df, target_path, batch_key_list, partition_by_list, partitions_immutable)
         else:
             raise ValueError('Batch key list is empty.')
     elif write_method == 'pk_merge':
-        primary_key_list = get_primary_key_list(schema_json)
         if primary_key_list:
             write_pk_merge(df, target_path, primary_key_list, partition_by_list, partitions_immutable)
         else:
@@ -465,7 +471,7 @@ def write_to_silver(df, target_path, schema_json, write_method, partitions_immut
 
 # CELL ********************
 
-write_to_silver(df, target_path, schema_json, write_method, partitions_immutable)
+write_to_silver(df, target_path, partition_by_list, batch_key_list, primary_key_list, write_method, partitions_immutable)
 
 # METADATA ********************
 

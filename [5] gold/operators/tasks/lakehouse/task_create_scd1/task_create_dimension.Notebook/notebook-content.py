@@ -36,8 +36,8 @@ from delta.tables import DeltaTable
 
 # PARAMETERS CELL ********************
 
-target_path = ''
-source_path = ''
+target_path = 'deltalake:fabric_showcase/gold_lakehouse/tables/dbo/DimBerryScd1'
+source_path = 'deltalake:fabric_showcase/silver_lakehouse/tables/pokemon/berry'
 schema = """
     [
         {"column_name": "Id", "is_business_key": 1, "is_order_by": 0, "is_surrogate_key": 0},
@@ -89,7 +89,7 @@ def get_business_key_list(schema_json):
     return result
 
 def get_order_by_list(schema_json):
-    filtered = [column for column in schema_json if column["is_order_by"] > 0]
+    filtered = [column for column in schema_json if column.get("is_order_by", 0) > 0]
     
     if not filtered:
         return None
@@ -133,7 +133,7 @@ sk_column = get_sk_column(schema_json)
 def clean_df_source(source_path, business_key_list, order_by_list = None, partition_column = None, min_partition = None):
     df_source = spark.read.format('delta').load(source_path)
     
-    if partition_column and min_partition:
+    if partition_column is not None and min_partition is not None:
         df_source = df_source.filter(sql_functions.col(partition_column) >= min_partition)
 
     df_source = df_source.dropna(subset = business_key_list)
@@ -258,9 +258,9 @@ def get_full_refresh_df(df, business_key_list, sk_column, order_by_list = None):
                   .orderBy(*[sql_functions.col(c).desc_nulls_last() for c in order_by_list])
         )
         df_dim = (
-            df0.withColumn("_rn", sql_functions.row_number().over(w_pick))
-               .filter(sql_functions.col("_rn") == 1)
-               .drop("_rn")
+            df0.withColumn("_row_number", sql_functions.row_number().over(w_pick))
+               .filter(sql_functions.col("_row_number") == 1)
+               .drop("_row_number")
         )
 
     # Deterministic SK assignment for this rebuild
@@ -313,7 +313,7 @@ def get_max_partition(df, partition_column):
 
 # CELL ********************
 
-mssparkutils.exitValue(get_max_partition(df_source, partition_column))
+mssparkutils.notebook.exit(get_max_partition(df_source, partition_column))
 
 # METADATA ********************
 
