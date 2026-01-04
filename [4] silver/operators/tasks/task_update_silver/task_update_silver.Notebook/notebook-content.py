@@ -232,7 +232,7 @@ def read_bronze_table(source_path, extract_partition = None, min_extract_partiti
 
 # CELL ********************
 
-df_source = read_bronze_table(source_path, extract_partition, min_extract_partition)
+df_source = read_bronze_table(source_path, extract_partition, min_extract_partition).cache()
 
 # METADATA ********************
 
