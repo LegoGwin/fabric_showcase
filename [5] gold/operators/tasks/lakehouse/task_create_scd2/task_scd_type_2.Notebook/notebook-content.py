@@ -196,37 +196,31 @@ def incremental_scd2(source_path, target_path, schema_json, min_date_key):
 
     return df_updates.select(sql_functions.max(sql_functions.col(date_key)).alias(date_key)).collect()[0][date_key]
     
-def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key, valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
-    # latest batch only
-    max_date_key = df_source.selectsql_functions.max(sql_functions.col(date_key)).alias("max_dk")).first()["max_dk"]
+
+def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key,
+                        valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
+
+    max_date_key = df_source.select(sql_functions.max(sql_functionsF.col(date_key)).alias("max_dk")).first()["max_dk"]
     df_updates = df_source.filter(sql_functions.col(date_key) == sql_functions.lit(max_date_key))
 
-    # SCD2 columns
+    cols_for_hash = [sql_functions.coalesce(sql_functions.col(c).cast("string"), sql_functions.lit("∅")) for c in business_keys]
+
     df_updates = (
         df_updates
-        .withColumn(valid_from_col, sql_functions.lit(max_date_key))
+        .withColumn(valid_from_col, sql_functions.lit(max_date_key).cast("date"))
         .withColumn(valid_to_col, sql_functions.lit("9999-12-31").cast("date"))
         .withColumn(is_current_col, sql_functions.lit(True))
-        .withColumn(
-            row_hash_col,
-            sql_functions.sha2(sql_functions.concat_ws("||", *[sql_functions.col(c).cast("string") for c in business_keys]), 256),
-        )
+        .withColumn(row_hash_col, sql_functions.sha2(sql_functions.concat_ws("||", *cols_for_hash), 256))
     )
 
-    # Determine starting surrogate key safely
     df_target = delta_target.toDF()
     if surrogate_key_col in df_target.columns:
-        max_sk = (
-            df_target.select(sql_functions.max(sql_functions.col(surrogate_key_col)).alias("max_sk"))
-            .first()["max_sk"]
-        )
+        max_sk = df_target.select(sql_functions.max(sql_functions.col(surrogate_key_col)).alias("max_sk")).first()["max_sk"]
         max_sk = int(max_sk) if max_sk is not None else 0
     else:
-        # Column doesn't exist in target yet → start from 0
         max_sk = 0
 
-    # Assign new surrogate keys (deterministic within batch)
-    window = Window.orderBy(*[sql_functions.col(c) for c in primary_keys])
+    window = Window.orderBy(*[sql_functions.col(c) for c in primary_keys] + [sql_functions.col(row_hash_col)])
     df_updates = df_updates.withColumn(surrogate_key_col, sql_functions.row_number().over(window) + sql_functions.lit(max_sk))
 
     return df_updates

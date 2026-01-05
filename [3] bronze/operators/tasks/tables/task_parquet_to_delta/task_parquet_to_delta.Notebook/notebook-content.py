@@ -171,14 +171,14 @@ def dataframe_to_table(df, target_path, partition_name, full_refresh):
             .option('overwriteSchema', 'true') \
             .partitionBy(partition_name) \
             .format('delta') \
-            .save(abfss_path)
+            .save(target_path)
     else:
         df.write \
             .mode('append') \
             .option('mergeSchema', 'true') \
             .partitionBy(partition_name) \
             .format('delta') \
-            .save(abfss_path)
+            .save(target_path)
 
 # METADATA ********************
 
@@ -214,7 +214,7 @@ def get_max_partition(df, partition_name):
 
 # CELL ********************
 
-mssparkutils.notebook.exit(get_max_partition(df))
+mssparkutils.notebook.exit(get_max_partition(df, partition_name))
 
 # METADATA ********************
 
