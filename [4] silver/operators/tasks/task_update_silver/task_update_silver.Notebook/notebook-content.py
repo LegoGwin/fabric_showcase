@@ -406,7 +406,7 @@ def write_pk_merge(df, target_path, primary_key_list, partition_by_list = None, 
         .whenNotMatchedInsertAll() \
         .execute()
 
-def get_partition_filter(df, partition_by_list, *, max_partitions = 1024, max_predicate_chars = 32768):
+def get_partition_filter(df, partition_by_list, max_partitions = 1024, max_predicate_chars = 32768):
     if not partition_by_list:
         raise ValueError("partition_by_list must be a non-empty list of columns.")
 
