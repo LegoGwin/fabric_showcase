@@ -200,7 +200,7 @@ def incremental_scd2(source_path, target_path, schema_json, min_date_key):
 def inc_prepare_updates(df_source, delta_target, primary_keys, business_keys, date_key,
                         valid_from_col, valid_to_col, is_current_col, row_hash_col, surrogate_key_col):
 
-    max_date_key = df_source.select(sql_functions.max(sql_functionsF.col(date_key)).alias("max_dk")).first()["max_dk"]
+    max_date_key = df_source.select(sql_functions.max(sql_functions.col(date_key)).alias("max_dk")).first()["max_dk"]
     df_updates = df_source.filter(sql_functions.col(date_key) == sql_functions.lit(max_date_key))
 
     cols_for_hash = [sql_functions.coalesce(sql_functions.col(c).cast("string"), sql_functions.lit("∅")) for c in business_keys]
@@ -334,7 +334,7 @@ def fr_prepare_updates(df, primary_keys, business_keys, date_key, valid_from, va
 
 def overwrite_target(df_updates, target_path):
     df_updates.write \
-        .option('overwriteschema_json', 'true') \
+        .option('overwriteSchema', 'true') \
         .mode('overwrite') \
         .format('delta') \
         .save(target_path)
